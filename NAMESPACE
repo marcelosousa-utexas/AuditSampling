@@ -1,0 +1,7 @@
+exportPattern("^[[:alpha:]]+")
+import(ggplot2)
+import(tidyverse)
+import(readxl)
+import(tcltk)
+import(shiny)
+import(shinyjs)
