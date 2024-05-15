@@ -1,4 +1,4 @@
-init_GUI <- function() {
+initGUI <- function() {
 
   ui <- fluidPage(
     useShinyjs(), # Use shinyjs
@@ -238,4 +238,4 @@ init_GUI <- function() {
 
 }
 
-init_GUI()
+initGUI()
