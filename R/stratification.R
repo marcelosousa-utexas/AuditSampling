@@ -703,6 +703,7 @@ build_final_strata <- function(best_n_dataframe, estimation_method, p1, my_data,
 execute <- function (my_data, data_column_name, user_cutoff = desired_precision/2, estimation_method = "mean", allocation_method = "Neyman", L = seq(10,10), confidence = 0.95, desired_precision = sum(my_data[data_column_name])*0.02 , n_min = 30, ni_min = 5, break_n = 3) {
 
   print(paste("Desired precision:", desired_precision))
+  print(paste("Cutoff :", user_cutoff))
   print(paste("Confidence level:", confidence))
   print(paste("Estimated mode:", estimation_method))
   print(paste("Allocation method:", allocation_method))

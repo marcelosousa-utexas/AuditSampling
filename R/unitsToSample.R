@@ -1,4 +1,4 @@
-unitsToSample <- function(my_data, result) {
+unitsToSample <- function(my_data, data_column_name, result) {
 
   sample_planning <- result$sample_planning
   #best_n_dataframe <- result$best_n_dataframe
