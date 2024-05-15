@@ -14,5 +14,4 @@ Imports:
     ggplot2,
     tidyverse,
     readxl,
-    shiny,
     shinyjs
