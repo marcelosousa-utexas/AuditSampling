@@ -10,11 +10,15 @@ evaluate_sample <- function(sample_planning, unitsToExamine, confidence = 0.95, 
     filter(grepl("^\\d+$", Stratum)) %>%
     select(Stratum, npop, Total)
 
-  sample_data <- unitsToExamine %>%
-    filter(grepl("^\\d+$", Stratum)) %>%
+  #print(pop_profile)
+
+  unitsToExamine <- unitsToExamine %>%
+    #filter(grepl("^\\d+$", Stratum)) %>%
     mutate (Audit_Values = !!sym(booked_column_name)) %>%
     select(Stratum, !!sym(booked_column_name), !!sym(audit_column_name))
 
+  sample_data <- unitsToExamine %>%
+    filter(grepl("^\\d+$", Stratum))
 
   ### FUNCTION DEFINITION
 
@@ -136,7 +140,7 @@ evaluate_sample <- function(sample_planning, unitsToExamine, confidence = 0.95, 
     mutate(npop = pop_profile$npop, sum_pop = pop_profile$Total) %>%
     #mutate(sd_error = sd_error_function(sd, nsample), exp_audited = expected_audited_value_func(sum_pop, mean_diff, npop), exp_sd_error = standard_error_pop_func(sd_error, npop), precision = precision_func(exp_sd_error, nsample)) %>%
     mutate(sd_error = sd_error_function(sd, nsample), exp_audited = expected_audited_value_func(sum_pop, mean, npop), exp_sd_error = standard_error_pop_func(sd_error, npop, nsample, sum_pop, exp_audited), precision = precision_function(exp_sd_error, alpha, nsample, npop, sd, t_Student)) %>%
-    mutate(Stratum = as.numeric(Stratum)) %>%
+    #mutate(Stratum = as.numeric(Stratum)) %>%
     relocate(npop, .after = Stratum) %>%
     relocate(sum_pop, .after = npop) %>%
     relocate(exp_audited, .after = sum_pop) %>%
@@ -145,7 +149,7 @@ evaluate_sample <- function(sample_planning, unitsToExamine, confidence = 0.95, 
     arrange(Stratum)
 
   all_result <- as.data.frame(all_result)
-  #all_result
+  #print(all_result)
 
   # Function to check if booked_value is within the specified interval
   check_within_interval <- function(materiality, booked_value, expected_audited_value, precision) {
@@ -164,6 +168,7 @@ evaluate_sample <- function(sample_planning, unitsToExamine, confidence = 0.95, 
 
   totals <- all_result %>%
     summarise(
+      Stratum = "Sub Total",
       var_mean = var_mean_function(sd, nsample, npop),
       var_estimate = sum(npop)**2*var_mean,
       exp_sd_error = sqrt(var_estimate),
@@ -186,10 +191,56 @@ evaluate_sample <- function(sample_planning, unitsToExamine, confidence = 0.95, 
     select(-var_estimate, -var_mean)
   #select(-sd_error_estimate, -var_estimate)
 
-  #totals
+  sub_strata_censu <- unitsToExamine %>%
+    filter(Stratum == "Censo")
 
-  sample_result <- bind_rows(all_result, totals)
-  sample_result <- sample_result %>%
+  sub_strata_censu <- sub_strata_censu %>%
+    group_by(Stratum) %>%
+    summarise(
+      Stratum = "Censo",
+      nsample = n(),
+      npop = n(),
+      exp_audited = sum(!!sym(audit_column_name)),
+      sum_pop = sum(!!sym(booked_column_name)),
+      sum_booked = sum(!!sym(booked_column_name)),
+      sum_audited = sum(!!sym(audit_column_name)),
+      contagem = contagem_function(!!sym(booked_column_name), !!sym(audit_column_name)),
+      #exp_sd_error = "-",
+      #sd = "-",
+      #precision = "-"
+    ) %>%
+    ungroup()
+
+  if (length(sub_strata_censu$npop) > 0) {
+    strata <- bind_rows(all_result, totals, sub_strata_censu)
+  } else {
+    strata <- bind_rows(all_result)
+  }
+
+  #print(strata)
+  #print("strata")
+
+  total_line <- strata %>%
+    filter(!(Stratum == "Sub Total")) %>%
+    summarise(Stratum = "Total",
+              #sd = sqrt(sum(npop*(npop - ni) * sd**2 / ni)/sum(npop)**2),
+              #sd = sqrt((sum(npop**2 * sd**2/ni)/(sum(npop)**2)) - (sum(npop * sd**2)/(sum(npop)**2))),
+              sd = totals$sd,
+              precision = totals$precision,
+              exp_sd_error = totals$exp_sd_error,
+              nsample = sum(nsample),
+              npop = sum(npop),
+              exp_audited = sum(exp_audited),
+              sum_pop = sum(sum_pop),
+              sum_booked = sum(sum_booked),
+              sum_audited = sum(sum_audited),
+              contagem = sum(contagem)
+    )
+
+  strata <- bind_rows(strata, total_line)
+
+  #sample_result <- bind_rows(all_result, totals)
+  sample_result <- strata %>%
     select(-sd_error, -mean) %>%
     #relocate(mean_diff, .after = sd) %>%
     #relocate(exp_audited, .after = mean_diff) %>%
@@ -201,21 +252,136 @@ evaluate_sample <- function(sample_planning, unitsToExamine, confidence = 0.95, 
     relocate(contagem, .after = precision)
 
   sample_result <- data.frame(sample_result)
+  #print(sample_result)
 
-  format_column <- function(dataframe) {
-    formatC(dataframe, format = "f", big.mark = ".", decimal.mark = ",", digits = 2)
-  }
+  # format_column <- function(dataframe) {
+  #   formatC(dataframe, format = "f", big.mark = ".", decimal.mark = ",", digits = 2)
+  # }
+  #
+  # # Apply the format_column function to all columns in the dataframe
+  # sample_result  <- sample_result %>%
+  #   mutate_at(vars(-one_of("Stratum", "npop", "nsample", "contagem")), format_column) %>%
+  #   mutate(
+  #     npop =  formatC(npop, format = "f", big.mark = ".", decimal.mark = ",", digits = 0),
+  #     Stratum = ifelse(is.na(Stratum), "Total", Stratum)
+  #   )
 
-  # Apply the format_column function to all columns in the dataframe
-  sample_result  <- sample_result %>%
-    mutate_at(vars(-one_of("Stratum", "npop", "nsample", "contagem")), format_column) %>%
-    mutate(
-      npop =  formatC(npop, format = "f", big.mark = ".", decimal.mark = ",", digits = 0),
-      Stratum = ifelse(is.na(Stratum), "Total", Stratum)
-    )
+  #print(sample_result)
+  return(sample_result)
 
-  print(sample_result)
 
 }
 
+hello <- function() {
+  print("my hello")
+}
 
+
+add_ni_strata <- function(strata, max_index) {
+
+  strata$ni[max_index] = strata$ni[max_index] + 1
+  strata$ni[strata$Stratum == "Total"] <- strata$ni[strata$Stratum == "Total"] + 1
+
+  strata_total <- strata %>%
+    filter(!grepl("^\\d+$", Stratum))
+
+  strata <- strata %>%
+    filter(grepl("^\\d+$", Stratum)) %>%
+    mutate (
+      pi = ni/sum(ni)
+    )
+
+  strata <- rbind(strata, strata_total)
+  return(strata)
+
+}
+
+take_more_samples <-  function (my_data, data_column_name, desired_precision, result, unitsToExamine, eval_dataframe, confidence = 0.95, estimation_method = "mean", t_Student = FALSE) {
+
+  #print(my_data)
+  #print(result$optimum_result$bins[[1]])
+  #print(eval_dataframe)
+
+  bins <- result$optimum_result$bins[[1]]
+  strata <- result$sample_planning
+
+  my_data <- my_data %>%
+    mutate(
+      Stratum = as.character(cut(!!sym(data_column_name), breaks = bins, labels = FALSE, include.lowest = TRUE)),
+      Stratum = ifelse(is.na(Stratum), "Censo", Stratum)
+    )
+
+  temp_eval_dataframe <- eval_dataframe
+
+  eval_verification <- eval_dataframe %>%
+    filter(grepl("^\\d+$", Stratum))
+
+  sample_achieved_precision <- max(eval_dataframe$precision, na.rm = TRUE)
+
+  #print(desired_precision)
+  #print("desired_precision")
+  #print(sample_achieved_precision)
+
+  while (sample_achieved_precision > desired_precision) {
+
+    #print(eval_dataframe)
+
+    sde_col <- eval_verification$exp_sd_error
+
+    while(length(sde_col) > 1) {
+      # Find the maximum value
+      max_val <- max(sde_col, na.rm = TRUE)
+
+      # Find the index of the maximum value
+      max_index <- which(sde_col == max_val)
+
+      sde_col <- sde_col[-max_index]
+
+      if ( eval_verification$nsample[max_index] < eval_verification$npop[max_index] ) {
+        #eval_verification$nsample[max_index] = eval_verification$nsample[max_index] + 1
+        print(max_val)
+
+        remaining_df <- anti_join(my_data, unitsToExamine, by = names(my_data))
+        remaining_df <- remaining_df %>%
+          filter(Stratum == eval_dataframe$Stratum[max_index])
+
+        #sample_element <- sample(remaining_df[[data_column_name]], size = 1)
+        sample_index <- sample(nrow(remaining_df), size = 1)
+        sample_row <- remaining_df[sample_index, ]
+        sample_row <- sample_row %>%
+          mutate(Booked_Values = !!sym(data_column_name))
+
+        unitsToExamine <- rbind(unitsToExamine, sample_row)
+
+        strata <- add_ni_strata(strata, max_index)
+
+        eval_dataframe <- evaluate_sample(strata, unitsToExamine)
+
+        eval_verification <- eval_dataframe %>%
+          filter(grepl("^\\d+$", Stratum))
+
+
+        sample_achieved_precision <- max(eval_dataframe$precision, na.rm = TRUE)
+
+
+
+        break
+      }
+      else {
+        next
+      }
+
+    }
+
+    if (desired_precision >= sample_achieved_precision) {
+      break
+    }
+
+  }
+
+  unitsToExamine <- unitsToExamine %>%
+    arrange(!!sym(data_column_name))
+
+  return(list(unitsToExamine = unitsToExamine, eval_dataframe = eval_dataframe))
+
+}

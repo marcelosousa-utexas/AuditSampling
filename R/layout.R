@@ -1,3 +1,34 @@
+show_warning_yes_no <- function (achieved_precision, desired_precision) {
+
+  text = paste("Achieved Precision from the sample was ", achieved_precision, ", which is greater than the planned precision of ", desired_precision ,". Do you want to increase your sample size to match the specifications?")
+
+  showModal(modalDialog(
+    title = "Important message",
+    div(id = "textmsg", paste(text)),
+    footer = tagList(
+      actionButton("no", "No"),
+      actionButton("yes", "Yes")
+    )
+  ))
+
+}
+
+
+show_warning_msg <- function (old_n, new_n, achieved_precision, desired_precision) {
+
+  #text = paste("Achieved Precision from the sample was ", achieved_precision, ", which is greater than the planned precision of ", desired_precision ,". Do you want to increase your sample size to match the specifications?")
+  text = paste("The sample size was increased from ", old_n, " to ", new_n, ", to achieve the planned precision of ", desired_precision ,". Now the achieved precision is ", achieved_precision)
+
+  showModal(modalDialog(
+    title = "Important message",
+    div(id = "textmsg", paste(text)),
+    footer = tagList(
+      actionButton("ok", "OK")
+    )
+  ))
+
+}
+
 initGUI <- function() {
 
   ui <- fluidPage(
@@ -37,7 +68,6 @@ initGUI <- function() {
                              div(id = "feedback"), # This will display the feedback message
                              tableOutput("dataTable"), # This will display the table
                              downloadButton("downloadDesign", "Download Sampling Design"), # This will create the download button
-                             downloadButton("downloadSample", "Download Sample Units"), # This will create the download button
                              actionButton("next_to_evaluation", "Generate Sample")
                            )
                          )
@@ -45,6 +75,8 @@ initGUI <- function() {
                 tabPanel("Evaluation",
                          mainPanel(
                            tableOutput("dataTableEvaluate"), # This will display the table
+                           downloadButton("downloadEvaluation", "Download Sampling Evaluation"), # This will create the download button
+                           downloadButton("downloadSample", "Download Sample Units"), # This will create the download button
                            actionButton("new_sample", "New Sample")
                          )
                 )
@@ -55,12 +87,130 @@ initGUI <- function() {
     # Hide Tab2 initially
     hideTab(inputId = "tabs", target = "Sampling")
     hideTab(inputId = "tabs", target = "Evaluation")
+    shinyjs::hide("next_to_evaluation")
+    shinyjs::hide("downloadDesign")
+
     result_react <- reactiveVal(NULL)
     samplingDesign_react <- reactiveVal(NULL)
     sampleUnits_react <- reactiveVal(NULL)
     evaluation_react <- reactiveVal(NULL)
+    new_sampleUnits_react <- reactiveVal(NULL)
+    new_evaluation_react <- reactiveVal(NULL)
+    is_new_sample_react <- reactiveVal(NULL)
+    is_new_sample_react(FALSE)
+
     formData <- reactiveValues(data = list())
     data_react <- reactiveVal()
+    #userResponse <- reactiveValues(response = NULL)
+    userResponse <- reactiveVal(NULL)
+
+          shinyjs::hide("next_to_evaluation")
+
+    observeEvent(input$no, {
+      userResponse("No")
+      removeModal()
+    })
+
+    observeEvent(input$yes, {
+      userResponse("Yes")
+      removeModal()
+    })
+
+    observeEvent(input$ok, {
+      removeModal()
+    })
+
+
+
+    # Define the download handler
+    output$downloadEvaluation <- downloadHandler(
+      filename = function() {
+        paste("sampleEvaluation-", Sys.Date(), ".csv", sep="")
+      },
+      content = function(file) {
+        # Call your custom function
+        # Write the data to a file
+        if (is_new_sample_react()) {
+          dataframe <- new_evaluation_react()
+        } else {
+          dataframe <- evaluation_react()
+        }
+        write.csv(dataframe, file, row.names = FALSE)
+      }
+    )
+
+    # Define the download handler
+    output$downloadSample <- downloadHandler(
+      filename = function() {
+        paste("sampleUnits-", Sys.Date(), ".csv", sep="")
+      },
+      content = function(file) {
+        # Define the dataframe based on a condition
+        print(is_new_sample_react())
+        print(nrow(new_sampleUnits_react()))
+        print("new_sampleUnits_react()")
+
+        if (is_new_sample_react()) {
+          dataframe <- new_sampleUnits_react()
+        } else {
+          dataframe <- sampleUnits_react()
+        }
+        print(nrow(dataframe))
+        # Write the data to a file
+        write.csv(dataframe, file, row.names = FALSE)
+      }
+    )
+
+
+
+    # Define the download handler
+    output$downloadDesign <- downloadHandler(
+      filename = function() {
+        paste("samplingDesign-", Sys.Date(), ".csv", sep="")
+      },
+      content = function(file) {
+        write.csv(samplingDesign_react(), file, row.names = FALSE)
+      }
+    )
+
+
+    observe({
+      if (!is.null(userResponse())) {
+        if (userResponse() == "Yes") {
+          new_samples <- take_more_samples(data_react(), selected_column(), formData$data$precision, result_react(), sampleUnits_react(), evaluation_react(), formData$data$confidence, formData$data$estimation_method, t_Student = FALSE)
+          new_sampleUnits_react(new_samples$unitsToExamine)
+          new_evaluation_react(new_samples$eval_dataframe)
+
+          #print(new_evaluation_react())
+
+
+          old_n <- evaluation_react() %>%
+            filter(Stratum == "Total") %>%
+            summarise(n = sum(nsample, na.rm = TRUE))
+
+          new_n <- new_evaluation_react() %>%
+            filter(Stratum == "Total") %>%
+            summarise(n = sum(nsample, na.rm = TRUE))
+
+          print(old_n$n)
+          print(new_n$n)
+
+          precision <- max(new_evaluation_react()$precision, na.rm = TRUE)
+          show_warning_msg(old_n$n, new_n$n, precision, formData$data$precision)
+
+          output$dataTableEvaluate <- renderTable({
+            #shinyjs::html("feedback2", "")
+            as.data.frame(new_evaluation_react())
+          })
+
+          userResponse(NULL)
+          is_new_sample_react(TRUE)
+
+        } else {
+          is_new_sample_react(FALSE)
+        }
+      }
+    })
 
     observeEvent(input$file1, {
       df <- read_excel(input$file1$datapath)
@@ -112,6 +262,7 @@ initGUI <- function() {
         as.data.frame(evaluation_react())
       })
 
+
     })
 
 
@@ -134,17 +285,27 @@ initGUI <- function() {
         as.data.frame(evaluation_react())
       })
 
+      precision <- max(evaluation_react()$precision, na.rm = TRUE)
+      #print(precision)
+      #print("precision")
+      if (!is.na(precision) & precision > formData$data$precision) {
+
+        show_warning_yes_no(precision,formData$data$precision)
+
+      }
+
     })
 
 
     observeEvent(input$submit, {
 
+      shinyjs::hide("downloadDesign")
+      shinyjs::hide("next_to_evaluation")
+
       my_data <- data_react() # Corrected
       data_column_name <- selected_column() # Corrected
 
       # Hide the download button at the start
-      shinyjs::hide("downloadDesign")
-      shinyjs::hide("downloadSample")
       shinyjs::hide("next_to_evaluation")
 
       # Clear the previous table immediately
@@ -195,39 +356,18 @@ initGUI <- function() {
       })
 
       samplingDesign_react(strata)
-      print(samplingDesign_react())
+      #print(samplingDesign_react())
 
       unitsToExamine <- unitsToSample(data_react(), selected_column(), result_react())
       sampleUnits_react(unitsToExamine)
-      print(sampleUnits_react())
+      #print(sampleUnits_react())
+
+      print(result_react()$achieved_precision)
 
 
-
-      # Define the download handler
-      output$downloadDesign <- downloadHandler(
-        filename = function() {
-          paste("samplingDesign-", Sys.Date(), ".csv", sep="")
-        },
-        content = function(file) {
-          write.csv(samplingDesign_react(), file, row.names = FALSE)
-        }
-      )
-
-      # Define the download handler
-      output$downloadSample <- downloadHandler(
-        filename = function() {
-          paste("sampleUnits-", Sys.Date(), ".csv", sep="")
-        },
-        content = function(file) {
-          # Call your custom function
-          # Write the data to a file
-          write.csv(sampleUnits_react(), file, row.names = FALSE)
-        }
-      )
 
       # Show the download button when the dataframe is ready
       shinyjs::show("downloadDesign")
-      shinyjs::show("downloadSample")
       shinyjs::show("next_to_evaluation")
 
     })
