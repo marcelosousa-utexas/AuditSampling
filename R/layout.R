@@ -38,7 +38,7 @@ show_warning_yes_no <- function (achieved_precision, desired_precision) {
 show_warning_msg <- function (old_n, new_n, achieved_precision, desired_precision) {
 
   #text = paste("Achieved Precision from the sample was ", achieved_precision, ", which is greater than the planned precision of ", desired_precision ,". Do you want to increase your sample size to match the specifications?")
-  text = paste("The sample size was increased from ", old_n ," to " , new_n, " to achieve the planned precision of ", desired_precision,". Now the achieved precision is", achieved_precision, ".", sep = "")
+  text = paste("The sample size was increased from ", old_n ," to " , new_n, " to achieve the planned precision of ", desired_precision,". Now the achieved precision is ", achieved_precision, ".", sep = "")
 
   showModal(modalDialog(
     title = "Important message",

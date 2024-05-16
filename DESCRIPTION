@@ -15,4 +15,5 @@ Imports:
     tidyverse,
     readxl,
     shiny,
-    shinyjs
+    shinyjs,
+    shinyWidgets
