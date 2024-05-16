@@ -1,6 +1,27 @@
+read_file <- function (filepath) {
+
+  # List of common Excel file extensions
+  excel_extensions <- c("xls", "xlsx", "xlsm", "xlsb")
+
+  # Example file extension
+  file_extension <- tools::file_ext(filepath)
+  print(file_extension)
+
+  # Compare if the file extension is in the list of Excel extensions
+  if (file_extension %in% excel_extensions) {
+    df <- read_excel(filepath)
+  } else if (file_extension %in% c("csv")) {
+    df <- read.csv(filepath)
+  } else {
+    # Code to execute if the file extension is neither Excel nor CSV
+    stop("Extension not supported.")
+  }
+
+}
+
 show_warning_yes_no <- function (achieved_precision, desired_precision) {
 
-  text = paste("Achieved Precision from the sample was", achieved_precision ,", which is greater than the planned precision of", desired_precision,". Do you want to increase your sample size to match the specifications?")
+  text = paste("Achieved Precision from the sample was ", achieved_precision ,", which is greater than the planned precision of ", desired_precision,". Do you want to increase your sample size to match the specifications?",  sep = "")
 
   showModal(modalDialog(
     title = "Important message",
@@ -17,7 +38,7 @@ show_warning_yes_no <- function (achieved_precision, desired_precision) {
 show_warning_msg <- function (old_n, new_n, achieved_precision, desired_precision) {
 
   #text = paste("Achieved Precision from the sample was ", achieved_precision, ", which is greater than the planned precision of ", desired_precision ,". Do you want to increase your sample size to match the specifications?")
-  text = paste("The sample size was increased from", old_n ,"to" , new_n, "to achieve the planned precision of", desired_precision,". Now the achieved precision is", achieved_precision, ".")
+  text = paste("The sample size was increased from ", old_n ," to " , new_n, " to achieve the planned precision of ", desired_precision,". Now the achieved precision is", achieved_precision, ".", sep = "")
 
   showModal(modalDialog(
     title = "Important message",
@@ -38,8 +59,17 @@ initGUI <- function() {
                 tabPanel("Input Data",
                          sidebarLayout(
                            sidebarPanel(
-                             fileInput("file1", "Choose Excel File",
-                                       accept = c(".xlsx")
+
+                             materialSwitch(
+                               inputId = "Id006",
+                               label = "Primary switch",
+                               status = "primary",
+                               right = TRUE,
+                               value = TRUE
+                             ),
+
+                             fileInput("file1", "Choose a Csv or Excel File",
+                                       accept = c(".xlsx, .csv")
                              ),
                              uiOutput("column_selector"),
                              actionButton("next_button", "Next")
@@ -89,7 +119,9 @@ initGUI <- function() {
     hideTab(inputId = "tabs", target = "Evaluation")
     shinyjs::hide("next_to_evaluation")
     shinyjs::hide("downloadDesign")
+    shinyjs::hide("file1")
 
+    sample_data_react <- reactiveVal(TRUE)
     result_react <- reactiveVal(NULL)
     samplingDesign_react <- reactiveVal(NULL)
     sampleUnits_react <- reactiveVal(NULL)
@@ -119,8 +151,6 @@ initGUI <- function() {
     observeEvent(input$ok, {
       removeModal()
     })
-
-
 
     # Define the download handler
     output$downloadEvaluation <- downloadHandler(
@@ -157,8 +187,6 @@ initGUI <- function() {
       }
     )
 
-
-
     # Define the download handler
     output$downloadDesign <- downloadHandler(
       filename = function() {
@@ -169,6 +197,17 @@ initGUI <- function() {
       }
     )
 
+    observe({
+      switch_status <- input$Id006
+      if (!is.null(switch_status)) {
+        if (switch_status) {
+          sample_data_react(TRUE)
+        } else {
+          sample_data_react(FALSE)
+          shinyjs::show("file1")
+        }
+      }
+    })
 
     observe({
       if (!is.null(userResponse())) {
@@ -210,7 +249,9 @@ initGUI <- function() {
     })
 
     observeEvent(input$file1, {
-      df <- read_excel(input$file1$datapath)
+
+      df <- read_file(input$file1$datapath)
+      print(sample_data_react())
       data_react(df)
       output$column_selector <- renderUI({
         selectInput("column_selector", "Select a column", choices = colnames(data_react()))
