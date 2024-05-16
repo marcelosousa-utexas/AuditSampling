@@ -1,6 +1,6 @@
 show_warning_yes_no <- function (achieved_precision, desired_precision) {
 
-  text = paste("Achieved Precision from the sample was ",achieved_precision,", which is greater than the planned precision of ", desired_precision,". Do you want to increase your sample size to match the specifications?")
+  text = paste("Achieved Precision from the sample was", achieved_precision ,", which is greater than the planned precision of", desired_precision,". Do you want to increase your sample size to match the specifications?")
 
   showModal(modalDialog(
     title = "Important message",
@@ -17,7 +17,7 @@ show_warning_yes_no <- function (achieved_precision, desired_precision) {
 show_warning_msg <- function (old_n, new_n, achieved_precision, desired_precision) {
 
   #text = paste("Achieved Precision from the sample was ", achieved_precision, ", which is greater than the planned precision of ", desired_precision ,". Do you want to increase your sample size to match the specifications?")
-  text = paste("The sample size was increased from ",old_n," to ",new_n," to achieve the planned precision of ", desired_precision,". Now the achieved precision is ", achieved_precision)
+  text = paste("The sample size was increased from", old_n ,"to" , new_n, "to achieve the planned precision of", desired_precision,". Now the achieved precision is", achieved_precision, ".")
 
   showModal(modalDialog(
     title = "Important message",
@@ -188,8 +188,8 @@ initGUI <- function() {
             filter(Stratum == "Total") %>%
             summarise(n = sum(nsample, na.rm = TRUE))
 
-          print(old_n$n)
-          print(new_n$n)
+          #print(old_n$n)
+          #print(new_n$n)
 
           precision <- max(new_evaluation_react()$precision, na.rm = TRUE)
 
@@ -359,7 +359,7 @@ initGUI <- function() {
       sampleUnits_react(unitsToExamine)
       #print(sampleUnits_react())
 
-      print(result_react()$achieved_precision)
+      #print(result_react()$achieved_precision)
 
 
 
