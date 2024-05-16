@@ -1,6 +1,6 @@
 show_warning_yes_no <- function (achieved_precision, desired_precision) {
 
-  text = paste("Achieved Precision from the sample was ", achieved_precision, ", which is greater than the planned precision of ", desired_precision ,". Do you want to increase your sample size to match the specifications?")
+  text = paste("Achieved Precision from the sample was ",achieved_precision,", which is greater than the planned precision of ", desired_precision,". Do you want to increase your sample size to match the specifications?")
 
   showModal(modalDialog(
     title = "Important message",
@@ -17,7 +17,7 @@ show_warning_yes_no <- function (achieved_precision, desired_precision) {
 show_warning_msg <- function (old_n, new_n, achieved_precision, desired_precision) {
 
   #text = paste("Achieved Precision from the sample was ", achieved_precision, ", which is greater than the planned precision of ", desired_precision ,". Do you want to increase your sample size to match the specifications?")
-  text = paste("The sample size was increased from ", old_n, " to ", new_n, ", to achieve the planned precision of ", desired_precision ,". Now the achieved precision is ", achieved_precision)
+  text = paste("The sample size was increased from ",old_n," to ",new_n," to achieve the planned precision of ", desired_precision,". Now the achieved precision is ", achieved_precision)
 
   showModal(modalDialog(
     title = "Important message",
@@ -146,16 +146,12 @@ initGUI <- function() {
       },
       content = function(file) {
         # Define the dataframe based on a condition
-        print(is_new_sample_react())
-        print(nrow(new_sampleUnits_react()))
-        print("new_sampleUnits_react()")
 
         if (is_new_sample_react()) {
           dataframe <- new_sampleUnits_react()
         } else {
           dataframe <- sampleUnits_react()
         }
-        print(nrow(dataframe))
         # Write the data to a file
         write.csv(dataframe, file, row.names = FALSE)
       }
@@ -196,7 +192,8 @@ initGUI <- function() {
           print(new_n$n)
 
           precision <- max(new_evaluation_react()$precision, na.rm = TRUE)
-          show_warning_msg(old_n$n, new_n$n, precision, formData$data$precision)
+
+          show_warning_msg(old_n$n, new_n$n, round(precision,2), round(formData$data$precision,2))
 
           output$dataTableEvaluate <- renderTable({
             #shinyjs::html("feedback2", "")
@@ -290,7 +287,7 @@ initGUI <- function() {
       #print("precision")
       if (!is.na(precision) & precision > formData$data$precision) {
 
-        show_warning_yes_no(precision,formData$data$precision)
+        show_warning_yes_no(round(precision,2),round(formData$data$precision,2))
 
       }
 

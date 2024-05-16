@@ -272,11 +272,6 @@ evaluate_sample <- function(sample_planning, unitsToExamine, confidence = 0.95, 
 
 }
 
-hello <- function() {
-  print("my hello")
-}
-
-
 add_ni_strata <- function(strata, max_index) {
 
   strata$ni[max_index] = strata$ni[max_index] + 1
@@ -339,7 +334,7 @@ take_more_samples <-  function (my_data, data_column_name, desired_precision, re
 
       if ( eval_verification$nsample[max_index] < eval_verification$npop[max_index] ) {
         #eval_verification$nsample[max_index] = eval_verification$nsample[max_index] + 1
-        print(max_val)
+        #print(max_val)
 
         remaining_df <- anti_join(my_data, unitsToExamine, by = names(my_data))
         remaining_df <- remaining_df %>%
