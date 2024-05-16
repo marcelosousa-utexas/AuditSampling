@@ -5,7 +5,7 @@ read_file <- function (filepath) {
 
   # Example file extension
   file_extension <- tools::file_ext(filepath)
-  print(file_extension)
+  #print(file_extension)
 
   # Compare if the file extension is in the list of Excel extensions
   if (file_extension %in% excel_extensions) {
@@ -62,7 +62,7 @@ initGUI <- function() {
 
                              materialSwitch(
                                inputId = "Id006",
-                               label = "Primary switch",
+                               label = "Use a pre-loaded data",
                                status = "primary",
                                right = TRUE,
                                value = TRUE
@@ -114,12 +114,14 @@ initGUI <- function() {
   )
 
   server <- function(input, output, session) {
+    #Sys.sleep(1) # This adds a 2-second pause
     # Hide Tab2 initially
     hideTab(inputId = "tabs", target = "Sampling")
     hideTab(inputId = "tabs", target = "Evaluation")
     shinyjs::hide("next_to_evaluation")
     shinyjs::hide("downloadDesign")
     shinyjs::hide("file1")
+    shinyjs::hide("next_button")
 
     sample_data_react <- reactiveVal(TRUE)
     result_react <- reactiveVal(NULL)
@@ -202,9 +204,16 @@ initGUI <- function() {
       if (!is.null(switch_status)) {
         if (switch_status) {
           sample_data_react(TRUE)
+          shinyjs::hide("file1")
+          shinyjs::hide("column_selector")
+          data_react(AuditSampling::invoices)
+          selected_column("Invoice_Amount")
+          shinyjs::show("next_button")
+
         } else {
           sample_data_react(FALSE)
           shinyjs::show("file1")
+          shinyjs::hide("next_button")
         }
       }
     })
@@ -251,13 +260,15 @@ initGUI <- function() {
     observeEvent(input$file1, {
 
       df <- read_file(input$file1$datapath)
-      print(sample_data_react())
+      #print(sample_data_react())
       data_react(df)
+      shinyjs::show("column_selector")
       output$column_selector <- renderUI({
         selectInput("column_selector", "Select a column", choices = colnames(data_react()))
       })
 
       updateSelectInput(session, "column_selector", "Select a column", choices = colnames(df))
+      shinyjs::show("next_button")
 
     })
 
