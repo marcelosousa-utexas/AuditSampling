@@ -1,4 +1,4 @@
-unitsToSample <- function(my_data, data_column_name, result) {
+unitsToSample <- function(my_data, data_column_name, primaryKey, result) {
 
   sample_planning <- result$sample_planning
   # #best_n_dataframe <- result$best_n_dataframe
@@ -42,7 +42,9 @@ unitsToSample <- function(my_data, data_column_name, result) {
     mutate(data = map2(data, Stratum, ~sample_func(.x, ni, .y))) %>%
     ungroup() %>%
     unnest(data) %>%
-    arrange(Stratum, !!sym(data_column_name))
+    arrange(Stratum, !!sym(data_column_name)) %>%
+    relocate(!!sym(primaryKey))
+
 
 
   unidades_auditoria <- rbind(sample_data, censo)

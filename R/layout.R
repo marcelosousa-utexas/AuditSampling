@@ -138,6 +138,7 @@ initGUI <- function() {
 
     formData <- reactiveValues(data = list())
     data_react <- reactiveVal()
+    new_data_react <- reactiveVal()
     #userResponse <- reactiveValues(response = NULL)
     userResponse <- reactiveVal(NULL)
 
@@ -237,7 +238,7 @@ initGUI <- function() {
         #writeData(wb, "Sample Design", samplingDesign_react())
 
         addWorksheet(wb, "Stratified Data")
-        writeData(wb, "Stratified Data", data_react())
+        writeData(wb, "Stratified Data", new_data_react())
 
         ##print(result_react())
         #evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react()))
@@ -310,6 +311,10 @@ initGUI <- function() {
             as.data.frame(new_evaluation_react())
           })
 
+
+          new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, new_sampleUnits_react()))
+          sampleUnits_react(new_sampleUnits_react())
+
           userResponse(NULL)
           is_new_sample_react(TRUE)
 
@@ -368,10 +373,10 @@ initGUI <- function() {
 
 
 
-      unitsToExamine <- unitsToSample(data_react(), selected_column(), result_react())
+      unitsToExamine <- unitsToSample(data_react(), selected_column(), primaryKey, result_react())
       sampleUnits_react(unitsToExamine)
 
-      data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
+      new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
 
 
       #print(sampleUnits_react())
@@ -399,9 +404,16 @@ initGUI <- function() {
       #showTab(inputId = "tabs", target = "Evaluation")
       #print(result_react())
 
-      unitsToExamine <- unitsToSample(data_react(), selected_column(), result_react())
-      sampleUnits_react(unitsToExamine)
+      #unitsToExamine <- unitsToSample(data_react(), selected_column(), primaryKey, result_react())
+      #sampleUnits_react(unitsToExamine)
       #print(sampleUnits_react())
+
+      #new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
+
+      unitsToExamine <- unitsToSample(data_react(), selected_column(), primaryKey, result_react())
+      sampleUnits_react(unitsToExamine)
+
+      new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
 
       evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react()))
 
