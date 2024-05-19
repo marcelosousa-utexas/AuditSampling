@@ -771,3 +771,21 @@ execute <- function (my_data, data_column_name, user_cutoff = desired_precision/
 
   return(list(achieved_precision = achieved_precision, sample_planning = strata, optimum_result = optimum_result, all_iteration_strata = all_iteration_strata))
 }
+
+
+updateDateBase <- function(dataframe, data_column_name, primaryKey, bins) {
+
+  updatedDataframe <- dataframe %>%
+    mutate(
+      !!sym(primaryKey) := row_number(),
+      Stratum = as.character(cut(!!sym(data_column_name), breaks = bins, labels = FALSE, include.lowest = TRUE)),
+      Stratum = ifelse(is.na(Stratum), "Censo", Stratum)
+    ) %>%
+    relocate(Stratum) %>%
+    relocate(!!sym(primaryKey)) %>%
+    arrange(Stratum, !!sym(data_column_name))
+
+  return(updatedDataframe)
+
+}
+

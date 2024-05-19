@@ -124,6 +124,7 @@ initGUI <- function() {
     shinyjs::hide("next_button")
 
     sample_data_react <- reactiveVal(TRUE)
+    parameters_reac <- reactiveVal(NULL)
     result_react <- reactiveVal(NULL)
     samplingDesign_react <- reactiveVal(NULL)
     sampleUnits_react <- reactiveVal(NULL)
@@ -132,6 +133,8 @@ initGUI <- function() {
     new_evaluation_react <- reactiveVal(NULL)
     is_new_sample_react <- reactiveVal(NULL)
     is_new_sample_react(FALSE)
+
+    primaryKey = "primaryKey"
 
     formData <- reactiveValues(data = list())
     data_react <- reactiveVal()
@@ -171,21 +174,80 @@ initGUI <- function() {
       }
     )
 
+    # # Define the download handler
+    # output$downloadSample <- downloadHandler(
+    #   filename = function() {
+    #     paste("sampleUnits-", Sys.Date(), ".csv", sep="")
+    #   },
+    #   content = function(file) {
+    #     # Define the dataframe based on a condition
+    #
+    #     if (is_new_sample_react()) {
+    #       dataframe <- new_sampleUnits_react()
+    #     } else {
+    #       dataframe <- sampleUnits_react()
+    #     }
+    #     # Write the data to a file
+    #     write.csv(dataframe, file, row.names = FALSE)
+    #   }
+    # )
+
+
     # Define the download handler
     output$downloadSample <- downloadHandler(
       filename = function() {
-        paste("sampleUnits-", Sys.Date(), ".csv", sep="")
+        paste("sampleData-", Sys.Date(), ".xlsx", sep="")
       },
       content = function(file) {
         # Define the dataframe based on a condition
 
-        if (is_new_sample_react()) {
-          dataframe <- new_sampleUnits_react()
-        } else {
-          dataframe <- sampleUnits_react()
-        }
+        # Extract only two columns from the list
+
+
+        sub_list_1 <- formData$data[1:(length(formData$data) - 1)]
+
+        sub_list_2 <- list(
+          L = result_react()$optimum_result$L,
+          cut_off = result_react()$optimum_result$cut_off,
+          number_of_bins = result_react()$optimum_result$number_of_bins,
+          binwidth = result_react()$optimum_result$binwidth
+        )
+
+        #vec2 <- list(L = result_react()$optimum_result$L)
+
+        #print(result_react()$optimum_result)
+
+        # Create a new workbook
+        wb <- createWorkbook()
+
+        # Add each data frame to a separate sheet in the workbook
+        addWorksheet(wb, "Parameters")
+        writeData(wb, "Parameters", data.frame(append(sub_list_1, sub_list_2)))
+
+
+        addWorksheet(wb, "Sample Design")
+
+
+        #df <- data.frame(result_react()$optimum_result)
+        #df$bins <- sapply(df$bins, function(x) paste(x, collapse = ", "))
+        #df$strata <- sapply(df$strata, function(x) paste(x, collapse = ", "))
+        #writeData(wb, "Sample Design", df)
+
+        writeData(wb, "Sample Design", samplingDesign_react())
+        #writeData(wb, "Sample Design", samplingDesign_react())
+
+        addWorksheet(wb, "Stratified Data")
+        writeData(wb, "Stratified Data", data_react())
+
+        ##print(result_react())
+        #evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react()))
+
+        addWorksheet(wb, "Sample to Analyse")
+        #writeData(wb, "Sample to Analyse", data.frame(formData$data))
+        writeData(wb, "Sample to Analyse", sampleUnits_react())
+
         # Write the data to a file
-        write.csv(dataframe, file, row.names = FALSE)
+        saveWorkbook(wb, file)
       }
     )
 
@@ -303,6 +365,20 @@ initGUI <- function() {
       hideTab(inputId = "tabs", target = "Input Data")
       hideTab(inputId = "tabs", target = "Sampling")
       showTab(inputId = "tabs", target = "Evaluation")
+
+
+
+      unitsToExamine <- unitsToSample(data_react(), selected_column(), result_react())
+      sampleUnits_react(unitsToExamine)
+
+      data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
+
+
+      #print(sampleUnits_react())
+
+      #print(result_react()$achieved_precision)
+
+
       #print(result_react())
       evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react()))
 
@@ -351,8 +427,16 @@ initGUI <- function() {
       shinyjs::hide("downloadDesign")
       shinyjs::hide("next_to_evaluation")
 
-      my_data <- data_react() # Corrected
+
       data_column_name <- selected_column() # Corrected
+
+      #my_data <- data_react() # Corrected
+
+      my_data <- data_react() %>%
+        mutate(!!sym(primaryKey) := row_number()) %>%
+        select(!!sym(primaryKey), !!sym(data_column_name))
+
+
 
       # Hide the download button at the start
       shinyjs::hide("next_to_evaluation")
@@ -365,7 +449,7 @@ initGUI <- function() {
 
 
       # Simulate a delay to mimic a calculation process
-      Sys.sleep(2) # This adds a 2-second pause
+      #Sys.sleep(2) # This adds a 2-second pause
 
       #observeEvent(input$submit, {
       formData$data <- list(
@@ -378,11 +462,13 @@ initGUI <- function() {
         L = seq(input$L[1], input$L[2])
       )
 
+      #parameters_reac(formData$data)
+
       result_react(execute(
         my_data = my_data, # Corrected
         data_column_name = data_column_name, # Corrected
         #user_cutoff =  formData$data$precision/2,
-        user_cutoff =  35000,
+        #user_cutoff =  35000,
         estimation_method = formData$data$estimation_method,
         allocation_method = formData$data$allocation_method,
         L = formData$data$L,
@@ -407,12 +493,25 @@ initGUI <- function() {
       samplingDesign_react(strata)
       #print(samplingDesign_react())
 
-      unitsToExamine <- unitsToSample(data_react(), selected_column(), result_react())
-      sampleUnits_react(unitsToExamine)
-      #print(sampleUnits_react())
+      # bins <- result_react()$optimum_result$bins[[1]]
+      #
+      # my_data <- data_react() %>%
+      #   mutate(
+      #     primaryKey = row_number(),
+      #     Stratum = as.character(cut(!!sym(data_column_name), breaks = bins, labels = FALSE, include.lowest = TRUE)),
+      #     Stratum = ifelse(is.na(Stratum), "Censo", Stratum)
+      #   ) %>%
+      # relocate(primaryKey) %>%
+      # arrange(Stratum, !!sym(data_column_name))
+      #
+      # data_react(my_data)
+      #
 
-      #print(result_react()$achieved_precision)
+      bins <- result_react()$optimum_result$bins[[1]]
 
+
+      updatedDataBase <- updateDateBase(data_react(), data_column_name, primaryKey, bins)
+      data_react(updatedDataBase)
 
 
       # Show the download button when the dataframe is ready
