@@ -16,4 +16,5 @@ Imports:
     readxl,
     shiny,
     shinyjs,
-    shinyWidgets
+    shinyWidgets,
+    openxlsx

@@ -1,16 +1,16 @@
 unitsToSample <- function(my_data, data_column_name, primaryKey, result) {
 
-  sample_planning <- result$sample_planning
-  # #best_n_dataframe <- result$best_n_dataframe
-  # bins <- result$optimum_result$bins[[1]]
-  #
-  # my_data <- my_data %>%
-  #   mutate(
-  #     Stratum = as.character(cut(!!sym(data_column_name), breaks = bins, labels = FALSE, include.lowest = TRUE)),
-  #     Stratum = ifelse(is.na(Stratum), "Censo", Stratum)
-  #   )
 
-  censo <- my_data %>%
+  # audited_column <- "Audited_Values"
+
+  # if (audited_column %in% names(unitsToSample)) {
+  #   unitsToSample <- unitsToSample %>% select(- !!sym(audited_column))
+  # }
+
+
+  sample_planning <- result$sample_planning
+
+    censo <- my_data %>%
     filter(Stratum == "Censo")  %>%
     arrange(Stratum, !!sym(data_column_name) )
 
@@ -45,21 +45,102 @@ unitsToSample <- function(my_data, data_column_name, primaryKey, result) {
     arrange(Stratum, !!sym(data_column_name)) %>%
     relocate(!!sym(primaryKey))
 
+  audit_units <- rbind(sample_data, censo)
 
 
-  unidades_auditoria <- rbind(sample_data, censo)
-
-  sample_data <- sample_data %>%
+  audit_units <- audit_units %>%
     mutate(
-      Booked_Values = !!sym(data_column_name)
+      Booked_Values = !!sym(data_column_name),
+      #Audited_Values = !!sym(data_column_name)
+      Audited_Values = NA
     )
 
-  unidades_auditoria <- unidades_auditoria %>%
-    mutate(
-      Booked_Values = !!sym(data_column_name)
-    )
+  # if (!(audited_column %in% names(audit_units))) {
+  #   print("not in column1")
+  #   audit_units <- audit_units %>%
+  #     mutate(!!sym(audited_column) := "")
+  # }
+
+
+  return(audit_units)
+}
+
+
+moreUnitsToSample <- function(dataframe, data_column_name, primaryKey, unitsToSample, ni) {
+
+  #print(unitsToSample)
+  # Define the column name to check
+  # audited_column <- "Audited_Values"
+  #
+  # if (audited_column %in% names(unitsToSample)) {
+  #   unitsToSample <- unitsToSample %>% select(- !!sym(audited_column))
+  # }
+
+
+  #print(unitsToSample)
+
+  sampling_data <- dataframe %>%
+    # mutate(
+    #   Booked_Values = !!sym(data_column_name),
+    #   Audited_Values = !!sym(data_column_name)
+    # )  %>%
+    filter(unitToSample == 0) %>%
+    select(-unitToSample)
+
+  # Define a custom sampling function
+  sample_func <- function(data, n, stratum) {
+    # Sample size cannot exceed data size
+    sample_size <- min(n[[stratum]], nrow(data))
+    # Use slice_sample function for stratified sampling
+    return(slice_sample(data, n = sample_size))
+  }
+
+  sample_data <- sampling_data %>%
+    # Filter for numeric strata (optional)
+    filter(grepl("^\\d+$", Stratum)) %>%
+    #mutate(Stratum = as.numeric(Stratum)) %>%
+    # Group by Stratum
+    group_by(Stratum) %>%
+    # Sample data from each group
+    nest() %>%
+    mutate(data = map2(data, Stratum, ~sample_func(.x, ni, .y))) %>%
+    ungroup() %>%
+    unnest(data) %>%
+    arrange(Stratum, !!sym(data_column_name)) %>%
+    relocate(!!sym(primaryKey))
+
+  # sample_data <- sample_data %>%
+  #   mutate(
+  #     Booked_Values = !!sym(data_column_name)
+  #   )
+
+  audit_units <- bind_rows(unitsToSample, sample_data)
+
+  #audit_units <- merge(dataframe, unitsToSample, by = primaryKey, all = TRUE)
+
+  print(audit_units)
+  print("audit_units")
+
+  audit_units <- audit_units %>%
+    mutate(Booked_Values = ifelse(is.na(Booked_Values), !!sym(data_column_name), Booked_Values)) %>%
+    # mutate(
+    #   Booked_Values = !!sym(data_column_name)
+    #   #Audited_Values = ""
+    # )  %>%
+    arrange(Stratum, !!sym(data_column_name))
+
+
+
+  # if (!(audited_column %in% names(audit_units))) {
+  #   print("not in column2")
+  #   audit_units <- audit_units %>%
+  #     mutate(!!sym(audited_column) := "")
+  # }
+
+  return(audit_units)
 
 }
+
 
 # df1 <- read.csv("/home/marcelo/Downloads/Invoices.csv") %>%
 #   select(Invoice_Number, Invoice_Amount)
@@ -72,19 +153,38 @@ unitsToSample <- function(my_data, data_column_name, primaryKey, result) {
 #
 #
 #
-check_unitToSample <- function(invoice_amount, Stratum) {
-  if (!is.na(invoice_amount)) {
-    if (Stratum == "Censo") {
-      return(2)
-    } else {
-      return(1)
-    }
-  } else {
-    return(0)
-  }
+
+updateNi <- function(dataframe, confidence, precision, n_min, ni_min) {
+
+  alplha <- 1 - confidence
+
+  eval <- dataframe %>%
+  filter(grepl("^\\d+$", Stratum))
+
+  new_ni <- get_ni(eval$npop, eval$sd, eval$nsample/(sum(eval$nsample)), alplha, precision, n_min, ni_min)
+
+  eval$nsample <- new_ni - eval$nsample
+
+  ni <- eval %>%
+    {setNames(.$nsample, .$Stratum)}
+
+  return(list(ni = ni, new_ni = new_ni))
 }
 
 updateDataBaseUnitsToSample <- function(dataframe, data_column_name, primaryKey, unitsToSample) {
+
+  check_unitToSample <- function(invoice_amount, Stratum) {
+    if (!is.na(invoice_amount)) {
+      if (Stratum == "Censo") {
+        return(2)
+      } else {
+        return(1)
+      }
+    } else {
+      return(0)
+    }
+  }
+
   #dataframe <- dataframe %>%
   #  mutate(unitToSample = ifelse(primaryKey %in% unitsToSample$primaryKey, 1, 0))
 

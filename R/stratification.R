@@ -700,6 +700,64 @@ build_final_strata <- function(best_n_dataframe, estimation_method, p1, my_data,
 
 }
 
+build_final_strata_update <- function(dataframe, new_ni){
+
+  strata <- dataframe %>%
+    filter(grepl("^\\d+$", Stratum)) %>%
+    ungroup() %>%
+    mutate(
+      ni = new_ni,
+      SDE = npop*sd/sqrt(ni)*sqrt((npop -ni)/npop)
+    )
+
+  #print(strata)
+
+  sub_totals <- strata %>%
+    summarise(
+      Stratum = "Sub Total",
+      #sd = sqrt(sum(npop*(npop - ni) * sd**2 / ni)/sum(npop)**2),
+      sd = sqrt((sum(npop**2 * sd**2/ni)/(sum(npop)**2)) - (sum(npop * sd**2)/(sum(npop)**2))),
+      SDE = sqrt(sum(SDE**2)),
+      ni = sum(ni),
+      Total = sum(Total),
+      xmin = min(xmin),
+      xmax = max(xmax),
+      npop = sum(npop),
+      mean = Total/npop
+    )
+
+  sub_strata_censu <- dataframe %>%
+    filter(Stratum == "Censo")
+
+  if (length(sub_strata_censu$npop) > 0) {
+    strata <- bind_rows(strata, sub_totals, sub_strata_censu)
+  } else {
+    strata <- bind_rows(strata)
+  }
+
+  total_line <- strata %>%
+    filter(!(Stratum == "Sub Total")) %>%
+    summarise(Stratum = "Total",
+              #sd = sqrt(sum(npop*(npop - ni) * sd**2 / ni)/sum(npop)**2),
+              #sd = sqrt((sum(npop**2 * sd**2/ni)/(sum(npop)**2)) - (sum(npop * sd**2)/(sum(npop)**2))),
+              sd = sub_totals$sd,
+              SDE = sub_totals$SDE,
+              xmin = min(xmin),
+              xmax = max(xmax),
+              #Sum_Squares = sum(Sum_Squares),
+              npop = sum(npop),
+              Total = sum(Total),
+              #sum_sqrtf = sum(sum_sqrtf),
+              #pi = NA,
+              ni = sum(ni),
+              mean = Total/ni,
+    )
+
+  strata <- bind_rows(strata, total_line)
+  return(strata)
+
+}
+
 execute <- function (my_data, data_column_name, user_cutoff = desired_precision/2, estimation_method = "mean", allocation_method = "Neyman", L = seq(10,10), confidence = 0.95, desired_precision = sum(my_data[data_column_name])*0.02 , n_min = 30, ni_min = 5, break_n = 3) {
 
   print(paste("Desired precision:", desired_precision))

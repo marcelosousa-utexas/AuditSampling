@@ -135,6 +135,8 @@ initGUI <- function() {
     is_new_sample_react(FALSE)
 
     primaryKey = "primaryKey"
+    booked_column_name = "Booked_Values"
+    audit_column_name = "Audited_Values"
 
     formData <- reactiveValues(data = list())
     data_react <- reactiveVal()
@@ -243,9 +245,14 @@ initGUI <- function() {
         ##print(result_react())
         #evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react()))
 
+        #sampleUnits <- sampleUnits_react() %>%
+        #  mutate(!!sym(audit_column_name) := !!sym(booked_column_name))
+
+
         addWorksheet(wb, "Sample to Analyse")
         #writeData(wb, "Sample to Analyse", data.frame(formData$data))
         writeData(wb, "Sample to Analyse", sampleUnits_react())
+        #writeData(wb, "Sample to Analyse", sampleUnits_react())
 
         # Write the data to a file
         saveWorkbook(wb, file)
@@ -284,7 +291,7 @@ initGUI <- function() {
     observe({
       if (!is.null(userResponse())) {
         if (userResponse() == "Yes") {
-          new_samples <- take_more_samples(data_react(), selected_column(), formData$data$precision, result_react(), sampleUnits_react(), evaluation_react(), formData$data$confidence, formData$data$estimation_method, t_Student = FALSE)
+          new_samples <- take_more_samples(data_react(), selected_column(), formData$data$precision, result_react()$sample_planning, sampleUnits_react(), evaluation_react(), formData$data$confidence, formData$data$estimation_method, t_Student = FALSE)
           new_sampleUnits_react(new_samples$unitsToExamine)
           new_evaluation_react(new_samples$eval_dataframe)
 
@@ -411,6 +418,8 @@ initGUI <- function() {
       #new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
 
       unitsToExamine <- unitsToSample(data_react(), selected_column(), primaryKey, result_react())
+      print(unitsToExamine)
+
       sampleUnits_react(unitsToExamine)
 
       new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
@@ -480,7 +489,7 @@ initGUI <- function() {
         my_data = my_data, # Corrected
         data_column_name = data_column_name, # Corrected
         #user_cutoff =  formData$data$precision/2,
-        #user_cutoff =  35000,
+        user_cutoff =  35000,
         estimation_method = formData$data$estimation_method,
         allocation_method = formData$data$allocation_method,
         L = formData$data$L,
@@ -494,8 +503,11 @@ initGUI <- function() {
 
       #print(result_react()$sample_planning)
 
+      # strata <- result_react()$sample_planning %>%
+      #   select(-pi, -Sum_Squares)
+
       strata <- result_react()$sample_planning %>%
-        select(-pi, -Sum_Squares)
+        select(-Sum_Squares)
 
       output$dataTable <- renderTable({
         shinyjs::html("feedback", "")

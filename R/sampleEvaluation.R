@@ -4,7 +4,7 @@ evaluate_sample <- function(sample_planning, unitsToExamine, confidence = 0.95, 
   alpha <- 1 - confidence
 
   booked_column_name = "Booked_Values"
-  audit_column_name = "Audit_Values"
+  audit_column_name = "Audited_Values"
 
   pop_profile <- sample_planning %>%
     filter(grepl("^\\d+$", Stratum)) %>%
@@ -12,10 +12,22 @@ evaluate_sample <- function(sample_planning, unitsToExamine, confidence = 0.95, 
 
   #print(pop_profile)
 
+  if (!(audit_column_name %in% names(unitsToExamine))) {
+    unitsToExamine <- unitsToExamine %>%
+      mutate(!!sym(audit_column_name) := !!sym(booked_column_name))
+  }
+
+  unitsToExamine <- unitsToExamine %>%
+    #mutate(!!sym(audit_column_name) := if_else(!!sym(audit_column_name) == "", NA, !!sym(audit_column_name))) %>%  # Convert empty strings to NA
+    mutate(!!sym(audit_column_name) := coalesce(!!sym(audit_column_name), !!sym(booked_column_name)))  # Replace NA with values from column2
+
+
   unitsToExamine <- unitsToExamine %>%
     #filter(grepl("^\\d+$", Stratum)) %>%
-    mutate (Audit_Values = !!sym(booked_column_name)) %>%
+    #mutate (!!sym(audit_column_name) := !!sym(booked_column_name)) %>%
     select(Stratum, !!sym(booked_column_name), !!sym(audit_column_name))
+
+  #print(unitsToExamine)
 
   sample_data <- unitsToExamine %>%
     filter(grepl("^\\d+$", Stratum))
@@ -291,20 +303,24 @@ add_ni_strata <- function(strata, max_index) {
 
 }
 
-take_more_samples <-  function (my_data, data_column_name, desired_precision, result, unitsToExamine, eval_dataframe, confidence = 0.95, estimation_method = "mean", t_Student = FALSE) {
+take_more_samples <-  function (my_data, data_column_name, desired_precision, strata, unitsToExamine, eval_dataframe, confidence = 0.95, estimation_method = "mean", t_Student = FALSE) {
 
   #print(my_data)
   #print(result$optimum_result$bins[[1]])
   #print(eval_dataframe)
 
-  bins <- result$optimum_result$bins[[1]]
-  strata <- result$sample_planning
+  # bins <- result$optimum_result$bins[[1]]
+  #strata <- result$sample_planning
+  #
+  # my_data <- my_data %>%
+  #   mutate(
+  #     Stratum = as.character(cut(!!sym(data_column_name), breaks = bins, labels = FALSE, include.lowest = TRUE)),
+  #     Stratum = ifelse(is.na(Stratum), "Censo", Stratum)
+  #   )
 
-  my_data <- my_data %>%
-    mutate(
-      Stratum = as.character(cut(!!sym(data_column_name), breaks = bins, labels = FALSE, include.lowest = TRUE)),
-      Stratum = ifelse(is.na(Stratum), "Censo", Stratum)
-    )
+  if ("Audited_Values" %in% names(unitsToExamine)) {
+    unitsToExamine <- unitsToExamine %>% select(-Audited_Values)
+  }
 
   temp_eval_dataframe <- eval_dataframe
 
@@ -336,9 +352,24 @@ take_more_samples <-  function (my_data, data_column_name, desired_precision, re
         #eval_verification$nsample[max_index] = eval_verification$nsample[max_index] + 1
         #print(max_val)
 
+        # if ("unitToSample" %in% names(my_data)) {
+        #   remaining_df <- my_data %>%
+        #     filter(unitToSample == 0) %>%
+        #     select(-unitToSample)
+        # } else {
+        #   remaining_df <- anti_join(my_data, unitsToExamine, by = names(my_data))
+        #   remaining_df <- remaining_df %>%
+        #     filter(Stratum == eval_dataframe$Stratum[max_index])
+        # }
+
+
+
         remaining_df <- anti_join(my_data, unitsToExamine, by = names(my_data))
         remaining_df <- remaining_df %>%
           filter(Stratum == eval_dataframe$Stratum[max_index])
+
+
+
 
         #sample_element <- sample(remaining_df[[data_column_name]], size = 1)
         sample_index <- sample(nrow(remaining_df), size = 1)
