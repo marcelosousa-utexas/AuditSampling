@@ -1,56 +1,58 @@
-read_file <- function (filepath) {
+initGUI <- function() {
 
-  # List of common Excel file extensions
-  excel_extensions <- c("xls", "xlsx", "xlsm", "xlsb")
+  read_file <- function (filepath) {
 
-  # Example file extension
-  file_extension <- tools::file_ext(filepath)
-  #print(file_extension)
+    # List of common Excel file extensions
+    excel_extensions <- c("xls", "xlsx", "xlsm", "xlsb")
 
-  # Compare if the file extension is in the list of Excel extensions
-  if (file_extension %in% excel_extensions) {
-    df <- read_excel(filepath)
-  } else if (file_extension %in% c("csv")) {
-    df <- read.csv(filepath)
-  } else {
-    # Code to execute if the file extension is neither Excel nor CSV
-    stop("Extension not supported.")
+    # Example file extension
+    file_extension <- tools::file_ext(filepath)
+    #print(file_extension)
+
+    # Compare if the file extension is in the list of Excel extensions
+    if (file_extension %in% excel_extensions) {
+      df <- read_excel(filepath)
+    } else if (file_extension %in% c("csv")) {
+      df <- read.csv(filepath)
+    } else {
+      # Code to execute if the file extension is neither Excel nor CSV
+      stop("Extension not supported.")
+    }
+
+    return(df)
+
   }
 
-}
+  show_warning_yes_no <- function (achieved_precision, desired_precision) {
 
-show_warning_yes_no <- function (achieved_precision, desired_precision) {
+    text = paste("Achieved Precision from the sample was ", achieved_precision ,", which is greater than the planned precision of ", desired_precision,". Do you want to increase your sample size to match the specifications?",  sep = "")
 
-  text = paste("Achieved Precision from the sample was ", achieved_precision ,", which is greater than the planned precision of ", desired_precision,". Do you want to increase your sample size to match the specifications?",  sep = "")
+    showModal(modalDialog(
+      title = "Important message",
+      div(id = "textmsg", paste(text)),
+      footer = tagList(
+        actionButton("no", "No"),
+        actionButton("yes", "Yes")
+      )
+    ))
 
-  showModal(modalDialog(
-    title = "Important message",
-    div(id = "textmsg", paste(text)),
-    footer = tagList(
-      actionButton("no", "No"),
-      actionButton("yes", "Yes")
-    )
-  ))
-
-}
+  }
 
 
-show_warning_msg <- function (old_n, new_n, achieved_precision, desired_precision) {
+  show_warning_msg <- function (old_n, new_n, achieved_precision, desired_precision) {
 
-  #text = paste("Achieved Precision from the sample was ", achieved_precision, ", which is greater than the planned precision of ", desired_precision ,". Do you want to increase your sample size to match the specifications?")
-  text = paste("The sample size was increased from ", old_n ," to " , new_n, " to achieve the planned precision of ", desired_precision,". Now the achieved precision is ", achieved_precision, ".", sep = "")
+    #text = paste("Achieved Precision from the sample was ", achieved_precision, ", which is greater than the planned precision of ", desired_precision ,". Do you want to increase your sample size to match the specifications?")
+    text = paste("The sample size was increased from ", old_n ," to " , new_n, " to achieve the planned precision of ", desired_precision,". Now the achieved precision is ", achieved_precision, ".", sep = "")
 
-  showModal(modalDialog(
-    title = "Important message",
-    div(id = "textmsg", paste(text)),
-    footer = tagList(
-      actionButton("ok", "OK")
-    )
-  ))
+    showModal(modalDialog(
+      title = "Important message",
+      div(id = "textmsg", paste(text)),
+      footer = tagList(
+        actionButton("ok", "OK")
+      )
+    ))
 
-}
-
-initGUI <- function() {
+  }
 
   ui <- fluidPage(
     useShinyjs(), # Use shinyjs
@@ -114,6 +116,7 @@ initGUI <- function() {
   )
 
   server <- function(input, output, session) {
+    options(shiny.maxRequestSize = 100 * 1024^2)
     #Sys.sleep(1) # This adds a 2-second pause
     # Hide Tab2 initially
     hideTab(inputId = "tabs", target = "Sampling")
@@ -144,7 +147,7 @@ initGUI <- function() {
     #userResponse <- reactiveValues(response = NULL)
     userResponse <- reactiveVal(NULL)
 
-          shinyjs::hide("next_to_evaluation")
+
 
     observeEvent(input$no, {
       userResponse("No")
@@ -213,7 +216,8 @@ initGUI <- function() {
           L = result_react()$optimum_result$L,
           cut_off = result_react()$optimum_result$cut_off,
           number_of_bins = result_react()$optimum_result$number_of_bins,
-          binwidth = result_react()$optimum_result$binwidth
+          binwidth = result_react()$optimum_result$binwidth,
+          step = 1
         )
 
         #vec2 <- list(L = result_react()$optimum_result$L)
@@ -291,7 +295,7 @@ initGUI <- function() {
     observe({
       if (!is.null(userResponse())) {
         if (userResponse() == "Yes") {
-          new_samples <- take_more_samples(data_react(), selected_column(), formData$data$precision, result_react()$sample_planning, sampleUnits_react(), evaluation_react(), formData$data$confidence, formData$data$estimation_method, t_Student = FALSE)
+          new_samples <- take_more_samples(data_react(), selected_column(), booked_column_name, audit_column_name, formData$data$precision, result_react()$sample_planning, sampleUnits_react(), evaluation_react(), formData$data$confidence, formData$data$estimation_method, t_Student = FALSE)
           new_sampleUnits_react(new_samples$unitsToExamine)
           new_evaluation_react(new_samples$eval_dataframe)
 
@@ -379,9 +383,13 @@ initGUI <- function() {
       showTab(inputId = "tabs", target = "Evaluation")
 
 
-
       unitsToExamine <- unitsToSample(data_react(), selected_column(), primaryKey, result_react())
+      #print(result_react()$sample_planning)
+      #print(samplingDesign_react())
+
       sampleUnits_react(unitsToExamine)
+      #print(sampleUnits_react())
+
 
       new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
 
@@ -392,7 +400,8 @@ initGUI <- function() {
 
 
       #print(result_react())
-      evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react()))
+      evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react(), booked_column_name, audit_column_name, formData$data$confidence, formData$data$estimation_method))
+      #print(result_react())
 
       output$dataTableEvaluate <- renderTable({
         #shinyjs::html("feedback2", "")
@@ -418,13 +427,16 @@ initGUI <- function() {
       #new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
 
       unitsToExamine <- unitsToSample(data_react(), selected_column(), primaryKey, result_react())
-      print(unitsToExamine)
+      #print(unitsToExamine)
 
       sampleUnits_react(unitsToExamine)
+      #print(samplingDesign_react())
 
       new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
 
-      evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react()))
+      #evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react(), ))
+      evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react(), booked_column_name, audit_column_name, formData$data$confidence, formData$data$estimation_method))
+
 
       output$dataTableEvaluate <- renderTable({
         #shinyjs::html("feedback2", "")
@@ -489,7 +501,7 @@ initGUI <- function() {
         my_data = my_data, # Corrected
         data_column_name = data_column_name, # Corrected
         #user_cutoff =  formData$data$precision/2,
-        user_cutoff =  35000,
+        #user_cutoff =  35000,
         estimation_method = formData$data$estimation_method,
         allocation_method = formData$data$allocation_method,
         L = formData$data$L,
@@ -532,10 +544,15 @@ initGUI <- function() {
       #
 
       bins <- result_react()$optimum_result$bins[[1]]
+      #print(bins)
+      #print(result_react()$optimum_result$cut_off[[1]])
 
 
       updatedDataBase <- updateDateBase(data_react(), data_column_name, primaryKey, bins)
       data_react(updatedDataBase)
+
+      #print(data_react() %>% filter(!!sym(data_column_name) > 13853600))
+
 
 
       # Show the download button when the dataframe is ready

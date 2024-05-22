@@ -10,7 +10,7 @@ unitsToSample <- function(my_data, data_column_name, primaryKey, result) {
 
   sample_planning <- result$sample_planning
 
-    censo <- my_data %>%
+  censo <- my_data %>%
     filter(Stratum == "Censo")  %>%
     arrange(Stratum, !!sym(data_column_name) )
 
@@ -159,7 +159,7 @@ updateNi <- function(dataframe, confidence, precision, n_min, ni_min) {
   alplha <- 1 - confidence
 
   eval <- dataframe %>%
-  filter(grepl("^\\d+$", Stratum))
+    filter(grepl("^\\d+$", Stratum))
 
   new_ni <- get_ni(eval$npop, eval$sd, eval$nsample/(sum(eval$nsample)), alplha, precision, n_min, ni_min)
 

@@ -62,8 +62,10 @@ build_bounds <- function(dataframe, data_column_name, user_cutoff = NA, directio
 
     # Find indices of outliers
     outliers_indices <- which(z_scores > z_threshold)
+    #print(outliers_indices)
 
     bounds <- get_bounds_from_vector(data[outliers_indices])
+    #print(bounds)
 
     # Remove outliers
     #cleaned_data <- data[-outliers_indices]
@@ -160,7 +162,7 @@ get_freq_distribution <- function(dataframe, data_column_name, binwidth, number_
   # Calculate histogram statistics without plotting
   hist_data <- ggplot(dataframe, aes(x = data)) +
     geom_histogram(color="black", fill="white", boundary = 0, binwidth = binwidth, bins = number_of_bins, closed="left") +
-    #geom_histogram(color="black", fill="white", boundary = 0, bins = 50, closed="left") +
+    #geom_histogram(color="black", fill="white", boundary = 0, bins = 500, closed="left") +
     #geom_histogram(color="black", fill="white", boundary = 0, binwidth = rounded_bin_width, bins = bins) +
     labs(x = "Column Name", y = "Frequency", title = "Histogram of Column Name")
 
@@ -482,7 +484,7 @@ build_best_n_dataframe <- function(strata, my_data_ref, data_column_name, iter, 
   n <- sum(strata$ni)
 
   n_census <- my_data_ref %>%
-    filter(!!sym(data_column_name) >= cut_off) %>%
+    filter(!!sym(data_column_name) > cut_off) %>%
     summarise(N = n())
   n_census <- sum(n_census$N)
 
@@ -514,6 +516,7 @@ build_sub_strata <- function (my_data_ref, data_column_name, dataframe, boundari
 best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, strata_L, estimation_method, allocation_method, p1, alpha, desired_precision, best_n_dataframe, n_min, ni_min, break_n) {
 
   iter <- 0
+  max_iter <- Inf
 
   while(TRUE) {
 
@@ -524,6 +527,23 @@ best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, s
 
     binwidth <- binwidth
     number_of_bins <- number_of_bins
+
+    #print(binwidth)
+    #print(number_of_bins)
+
+
+    while (number_of_bins > 500000){
+      max_iter <- 0
+      number_of_bins <- ceiling(number_of_bins/10)
+      binwidth <- ceiling(binwidth*10)
+      #binwidth <- ceiling(binwidth)
+      #binwidth <- sum(my_data[[data_column_name]])/number_of_bins
+      #rounded_bin_width <- round_to_human_interval(binwidth)
+    }
+
+
+    #print(binwidth)
+    #print(number_of_bins)
 
     #binwidth <- binwidth/(strata_L/4)
     #number_of_bins <- number_of_bins*(strata_L/4)
@@ -544,10 +564,14 @@ best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, s
     }
 
     best_cum_freq <- get_best_cum_freq(allocation_method, freq_distribution, strata_L)
+    #print(best_cum_freq)
 
     bins <- c(min(freq_distribution$xmin), best_cum_freq, min(max(freq_distribution$xmax), user_cutoff))
+    #print(bins)
+
 
     if (any(duplicated(bins))) {
+      #print("break 1")
       break
     }
 
@@ -572,14 +596,15 @@ best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, s
 
 
     my_data <- my_data %>%
-      filter(!!sym(data_column_name) < cut_off)
+      filter(!!sym(data_column_name) <= cut_off)
 
     sub_strata <- build_sub_strata(my_data, data_column_name, freq_distribution, boundaries, estimation_method, allocation_method, p1, alpha, desired_precision, strata_L, n_min, ni_min)
 
 
     if (any(sub_strata$npop == 1) | any(nrow(sub_strata) < strata_L)){
       #stop("Breaking loop: strata$npop contains 1.")
-      next
+      print("break 2")
+      break
     }
 
     bins <- c(sub_strata$xmin, tail(sub_strata$xmax, n = 1))
@@ -588,19 +613,21 @@ best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, s
 
     iter <- iter + 1
 
-    # if (iter > 0) {
-    #   break
-    # }
+    if (iter > max_iter) {
+      break
+    }
 
     check_n_var <- best_n_dataframe %>%
       filter(L == strata_L) %>%
       summarise(max_n = max(n), min_n = min(n))
 
     if (nrow(best_n_dataframe) > 1 & check_n_var$max_n > break_n*check_n_var$min_n) {
+      #print("break 3")
       break
     }
 
     if (sum(sub_strata$ni) < n_min) {
+      #print("break 4")
       break
     }
 
@@ -650,6 +677,8 @@ build_final_strata <- function(best_n_dataframe, estimation_method, p1, my_data,
   sub_strata_censu <- my_data %>%
     filter((!!sym(data_column_name)) > cut_off) %>%
     mutate(Stratum = "Censo")
+
+  #print(sub_strata_censu)
 
   sub_strata_censu <- sub_strata_censu %>%
     group_by(Stratum) %>%
@@ -800,12 +829,15 @@ execute <- function (my_data, data_column_name, user_cutoff = desired_precision/
       #user_cutoff = NULL, remove_mode = each
       remove_mode <- list_cutoff$remove_mode[i]
       #print(remove_mode)
+
       user_cutoff <- list_cutoff$user_cutoff[i]
-      #print(user_cutoff)
 
       bounds <- build_bounds(my_data, data_column_name, user_cutoff = user_cutoff, remove_mode = remove_mode)
       result <- dataframe_cutoff(my_data, data_column_name, bounds)
       cutted_data <- result$dataframe
+
+      user_cutoff <- bounds$upper_bound
+      print(user_cutoff)
       best_n_dataframe <- best_cut_off(my_data, user_cutoff, cutted_data, data_column_name, strata, estimation_method, allocation_method, p1, alpha, desired_precision, best_n_dataframe, n_min, ni_min, break_n)
     }
 
@@ -813,6 +845,7 @@ execute <- function (my_data, data_column_name, user_cutoff = desired_precision/
   }
 
 
+  print(best_n_dataframe)
   optimum_result <- build_optimum_result(best_n_dataframe)
 
   achieved_precision <- optimum_result$precision
