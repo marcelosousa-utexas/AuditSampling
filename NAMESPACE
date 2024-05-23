@@ -1,5 +1,6 @@
 exportPattern("^[[:alpha:]]+")
-export(initGUI)
+export(samplingGenerator_GUI)
+export(samplingEvaluation_GUI)
 import(ggplot2)
 import(tidyverse)
 import(readxl)

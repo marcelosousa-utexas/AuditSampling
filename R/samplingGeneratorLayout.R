@@ -1,81 +1,4 @@
-initGUI <- function() {
-
-  read_file <- function (filepath) {
-
-    # List of common Excel file extensions
-    excel_extensions <- c("xls", "xlsx", "xlsm", "xlsb")
-
-    # Example file extension
-    file_extension <- tools::file_ext(filepath)
-    #print(file_extension)
-
-    # Compare if the file extension is in the list of Excel extensions
-    if (file_extension %in% excel_extensions) {
-      df <- read_excel(filepath)
-    } else if (file_extension %in% c("csv")) {
-      df <- read.csv(filepath)
-    } else {
-      # Code to execute if the file extension is neither Excel nor CSV
-      stop("Extension not supported.")
-    }
-
-    return(df)
-
-  }
-
-
-
-  nicer_number_view <- function(sample_result) {
-
-    # Function to format numeric columns
-    format_column <- function(column) {
-      if (all(column == floor(column))) {
-        formatC(column, format = "f", big.mark = ".", decimal.mark = ",", digits = 0)
-      } else {
-        formatC(column, format = "f", big.mark = ".", decimal.mark = ",", digits = 2)
-      }
-    }
-
-    # Apply the format_column function to all numeric columns
-    sample_result <- sample_result %>%
-      mutate_if(is.numeric, format_column)
-
-    return(sample_result)
-  }
-
-
-
-
-  show_warning_yes_no <- function (achieved_precision, desired_precision) {
-
-    text = paste("Achieved Precision from the sample was ", achieved_precision ,", which is greater than the planned precision of ", desired_precision,". Do you want to increase your sample size to match the specifications?",  sep = "")
-
-    showModal(modalDialog(
-      title = "Important message",
-      div(id = "textmsg", paste(text)),
-      footer = tagList(
-        actionButton("no", "No"),
-        actionButton("yes", "Yes")
-      )
-    ))
-
-  }
-
-
-  show_warning_msg <- function (old_n, new_n, achieved_precision, desired_precision) {
-
-    #text = paste("Achieved Precision from the sample was ", achieved_precision, ", which is greater than the planned precision of ", desired_precision ,". Do you want to increase your sample size to match the specifications?")
-    text = paste("The sample size was increased from ", old_n ," to " , new_n, " to achieve the planned precision of ", desired_precision,". Now the achieved precision is ", achieved_precision, ".", sep = "")
-
-    showModal(modalDialog(
-      title = "Important message",
-      div(id = "textmsg", paste(text)),
-      footer = tagList(
-        actionButton("ok", "OK")
-      )
-    ))
-
-  }
+samplingGenerator_GUI <- function() {
 
   ui <- fluidPage(
     useShinyjs(), # Use shinyjs
@@ -244,10 +167,6 @@ initGUI <- function() {
           data_column_name = selected_column()
         )
 
-        #vec2 <- list(L = result_react()$optimum_result$L)
-
-        #print(result_react()$optimum_result)
-
         # Create a new workbook
         wb <- createWorkbook()
 
@@ -257,25 +176,10 @@ initGUI <- function() {
 
 
         addWorksheet(wb, "Sample Design")
-
-
-        #df <- data.frame(result_react()$optimum_result)
-        #df$bins <- sapply(df$bins, function(x) paste(x, collapse = ", "))
-        #df$strata <- sapply(df$strata, function(x) paste(x, collapse = ", "))
-        #writeData(wb, "Sample Design", df)
-
         writeData(wb, "Sample Design", samplingDesign_react())
-        #writeData(wb, "Sample Design", samplingDesign_react())
 
         addWorksheet(wb, "Stratified Data")
         writeData(wb, "Stratified Data", new_data_react())
-
-        ##print(result_react())
-        #evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react()))
-
-        #sampleUnits <- sampleUnits_react() %>%
-        #  mutate(!!sym(audit_column_name) := !!sym(booked_column_name))
-
 
         addWorksheet(wb, "Sample to Analyse")
         #writeData(wb, "Sample to Analyse", data.frame(formData$data))
@@ -361,7 +265,7 @@ initGUI <- function() {
 
     observeEvent(input$file1, {
 
-      df <- read_file(input$file1$datapath)
+      df <- read_data_file(input$file1$datapath)
       #print(sample_data_react())
       data_react(df)
       shinyjs::show("column_selector")
@@ -406,26 +310,10 @@ initGUI <- function() {
       hideTab(inputId = "tabs", target = "Sampling")
       showTab(inputId = "tabs", target = "Evaluation")
 
-
       unitsToExamine <- unitsToSample(data_react(), selected_column(), primaryKey, samplingDesign_react())
-      #print(result_react()$sample_planning)
-      #print(samplingDesign_react())
-
       sampleUnits_react(unitsToExamine)
-      #print(sampleUnits_react())
-
-
       new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
-
-
-      #print(sampleUnits_react())
-
-      #print(result_react()$achieved_precision)
-
-
-      #print(result_react())
       evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react(), booked_column_name, audit_column_name, formData$data$confidence, formData$data$estimation_method))
-      #print(evaluation_react())
 
       output$dataTableEvaluate <- renderTable({
         #shinyjs::html("feedback2", "")
@@ -439,28 +327,11 @@ initGUI <- function() {
     observeEvent(input$new_sample, {
 
       output$dataTableEvaluate <- renderTable({ data.frame() })
-      #hideTab(inputId = "tabs", target = "Input Data")
-      #hideTab(inputId = "tabs", target = "Sampling")
-      #showTab(inputId = "tabs", target = "Evaluation")
-      #print(result_react())
-
-      #unitsToExamine <- unitsToSample(data_react(), selected_column(), primaryKey, result_react())
-      #sampleUnits_react(unitsToExamine)
-      #print(sampleUnits_react())
-
-      #new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
 
       unitsToExamine <- unitsToSample(data_react(), selected_column(), primaryKey, samplingDesign_react())
-      #print(unitsToExamine)
-
       sampleUnits_react(unitsToExamine)
-      #print(samplingDesign_react())
-
       new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
-
-      #evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react(), ))
       evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react(), booked_column_name, audit_column_name, formData$data$confidence, formData$data$estimation_method))
-
 
       output$dataTableEvaluate <- renderTable({
         #shinyjs::html("feedback2", "")
@@ -468,12 +339,8 @@ initGUI <- function() {
       })
 
       precision <- max(evaluation_react()$precision, na.rm = TRUE)
-      #print(precision)
-      #print("precision")
       if (!is.na(precision) & precision > formData$data$precision) {
-
         show_warning_yes_no(round(precision,2),round(formData$data$precision,2))
-
       }
 
     })
@@ -487,13 +354,9 @@ initGUI <- function() {
 
       data_column_name <- selected_column() # Corrected
 
-      #my_data <- data_react() # Corrected
-
       my_data <- data_react() %>%
         mutate(!!sym(primaryKey) := row_number()) %>%
         select(!!sym(primaryKey), !!sym(data_column_name))
-
-
 
       # Hide the download button at the start
       shinyjs::hide("next_to_evaluation")
@@ -503,10 +366,6 @@ initGUI <- function() {
 
       # Use shinyjs to show the message immediately
       shinyjs::html("feedback", "Calculating... Please wait.")
-
-
-      # Simulate a delay to mimic a calculation process
-      #Sys.sleep(2) # This adds a 2-second pause
 
       #observeEvent(input$submit, {
       formData$data <- list(
@@ -518,8 +377,6 @@ initGUI <- function() {
         confidence = input$confidence,
         L = seq(input$L[1], input$L[2])
       )
-
-      #parameters_reac(formData$data)
 
       result_react(execute(
         my_data = my_data, # Corrected
@@ -535,13 +392,6 @@ initGUI <- function() {
         ni_min = formData$data$ni_min,
         break_n = 4))
 
-      #result_react(result)
-
-      #print(result_react()$sample_planning)
-
-      # strata <- result_react()$sample_planning %>%
-      #   select(-pi, -Sum_Squares)
-
       strata <- result_react()$sample_planning %>%
         select(-Sum_Squares)
 
@@ -551,33 +401,9 @@ initGUI <- function() {
       })
 
       samplingDesign_react(strata)
-      #print(samplingDesign_react())
-
-      # bins <- result_react()$optimum_result$bins[[1]]
-      #
-      # my_data <- data_react() %>%
-      #   mutate(
-      #     primaryKey = row_number(),
-      #     Stratum = as.character(cut(!!sym(data_column_name), breaks = bins, labels = FALSE, include.lowest = TRUE)),
-      #     Stratum = ifelse(is.na(Stratum), "Censo", Stratum)
-      #   ) %>%
-      # relocate(primaryKey) %>%
-      # arrange(Stratum, !!sym(data_column_name))
-      #
-      # data_react(my_data)
-      #
-
       bins <- result_react()$optimum_result$bins[[1]]
-      #print(bins)
-      #print(result_react()$optimum_result$cut_off[[1]])
-
-
       updatedDataBase <- updateDateBase(data_react(), data_column_name, primaryKey, bins)
       data_react(updatedDataBase)
-
-      #print(data_react() %>% filter(!!sym(data_column_name) > 13853600))
-
-
 
       # Show the download button when the dataframe is ready
       shinyjs::show("downloadDesign")
