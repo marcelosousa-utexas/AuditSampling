@@ -1,14 +1,4 @@
-unitsToSample <- function(my_data, data_column_name, primaryKey, result) {
-
-
-  # audited_column <- "Audited_Values"
-
-  # if (audited_column %in% names(unitsToSample)) {
-  #   unitsToSample <- unitsToSample %>% select(- !!sym(audited_column))
-  # }
-
-
-  sample_planning <- result$sample_planning
+unitsToSample <- function(my_data, data_column_name, primaryKey, sample_planning) {
 
   censo <- my_data %>%
     filter(Stratum == "Censo")  %>%
@@ -42,7 +32,8 @@ unitsToSample <- function(my_data, data_column_name, primaryKey, result) {
     mutate(data = map2(data, Stratum, ~sample_func(.x, ni, .y))) %>%
     ungroup() %>%
     unnest(data) %>%
-    arrange(Stratum, !!sym(data_column_name)) %>%
+    #arrange(Stratum, !!sym(data_column_name)) %>%
+    arrange(!!sym(data_column_name)) %>%
     relocate(!!sym(primaryKey))
 
   audit_units <- rbind(sample_data, censo)

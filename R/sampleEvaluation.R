@@ -142,8 +142,9 @@ evaluate_sample <- function(sample_planning, unitsToExamine, booked_column_name 
 
   ### CALCULATE PRECISION
 
+
   sample_result <- sample_data %>%
-    #mutate(strata = as.numeric(strata)) %>%
+    mutate(Stratum = as.numeric(Stratum)) %>%
     group_by(Stratum) %>%
     #summarise(nsample = n(), sum_booked = sum(Booked_Values), sum_audited = sum(Audit_Values),  mean = mean(Audit_Values), sd = sd(Audit_Values), contagem = contagem_function(Booked_Values,Audit_Values))
     summarise(nsample = n(), sum_booked = sum(!!sym(booked_column_name)), sum_audited = sum(!!sym(audit_column_name)),  mean = calculate_mean(estimation_method, !!sym(booked_column_name), !!sym(audit_column_name)), sd = calculate_sd(estimation_method, !!sym(booked_column_name), !!sym(audit_column_name)), contagem = contagem_function(!!sym(booked_column_name), !!sym(audit_column_name)))
@@ -161,11 +162,12 @@ evaluate_sample <- function(sample_planning, unitsToExamine, booked_column_name 
     relocate(sum_pop, .after = npop) %>%
     relocate(exp_audited, .after = sum_pop) %>%
     relocate(exp_sd_error, .after = exp_audited) %>%
-    relocate(sd_error, .after = sd) %>%
-    arrange(Stratum)
+    relocate(sd_error, .after = sd)
+    #arrange(Stratum)
 
   all_result <- as.data.frame(all_result)
-  #print(all_result)
+  all_result <- all_result %>%
+    mutate(Stratum = as.character(Stratum))
 
   # Function to check if booked_value is within the specified interval
   check_within_interval <- function(materiality, booked_value, expected_audited_value, precision) {
@@ -334,10 +336,6 @@ take_more_samples <-  function (my_data, data_column_name, booked_column_name, a
 
   sample_achieved_precision <- max(eval_dataframe$precision, na.rm = TRUE)
 
-  print(desired_precision)
-  print("desired_precision")
-  print(sample_achieved_precision)
-  print("sample_achieved_precision")
 
   while (sample_achieved_precision > desired_precision) {
 

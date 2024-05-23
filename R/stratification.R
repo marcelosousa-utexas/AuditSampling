@@ -837,15 +837,12 @@ execute <- function (my_data, data_column_name, user_cutoff = desired_precision/
       cutted_data <- result$dataframe
 
       user_cutoff <- bounds$upper_bound
-      print(user_cutoff)
       best_n_dataframe <- best_cut_off(my_data, user_cutoff, cutted_data, data_column_name, strata, estimation_method, allocation_method, p1, alpha, desired_precision, best_n_dataframe, n_min, ni_min, break_n)
     }
 
 
   }
 
-
-  print(best_n_dataframe)
   optimum_result <- build_optimum_result(best_n_dataframe)
 
   achieved_precision <- optimum_result$precision

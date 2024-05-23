@@ -23,6 +23,29 @@ initGUI <- function() {
 
   }
 
+
+
+  nicer_number_view <- function(sample_result) {
+
+    # Function to format numeric columns
+    format_column <- function(column) {
+      if (all(column == floor(column))) {
+        formatC(column, format = "f", big.mark = ".", decimal.mark = ",", digits = 0)
+      } else {
+        formatC(column, format = "f", big.mark = ".", decimal.mark = ",", digits = 2)
+      }
+    }
+
+    # Apply the format_column function to all numeric columns
+    sample_result <- sample_result %>%
+      mutate_if(is.numeric, format_column)
+
+    return(sample_result)
+  }
+
+
+
+
   show_warning_yes_no <- function (achieved_precision, desired_precision) {
 
     text = paste("Achieved Precision from the sample was ", achieved_precision ,", which is greater than the planned precision of ", desired_precision,". Do you want to increase your sample size to match the specifications?",  sep = "")
@@ -71,7 +94,7 @@ initGUI <- function() {
                              ),
 
                              fileInput("file1", "Choose a Csv or Excel File",
-                                       accept = c(".xlsx, .csv")
+                                       accept = c(".xlsx, .xls, .xlsm, .xlsb, .csv")
                              ),
                              uiOutput("column_selector"),
                              actionButton("next_button", "Next")
@@ -217,7 +240,8 @@ initGUI <- function() {
           cut_off = result_react()$optimum_result$cut_off,
           number_of_bins = result_react()$optimum_result$number_of_bins,
           binwidth = result_react()$optimum_result$binwidth,
-          step = 1
+          step = 1,
+          data_column_name = selected_column()
         )
 
         #vec2 <- list(L = result_react()$optimum_result$L)
@@ -319,7 +343,7 @@ initGUI <- function() {
 
           output$dataTableEvaluate <- renderTable({
             #shinyjs::html("feedback2", "")
-            as.data.frame(new_evaluation_react())
+            as.data.frame(nicer_number_view(new_evaluation_react()))
           })
 
 
@@ -383,7 +407,7 @@ initGUI <- function() {
       showTab(inputId = "tabs", target = "Evaluation")
 
 
-      unitsToExamine <- unitsToSample(data_react(), selected_column(), primaryKey, result_react())
+      unitsToExamine <- unitsToSample(data_react(), selected_column(), primaryKey, samplingDesign_react())
       #print(result_react()$sample_planning)
       #print(samplingDesign_react())
 
@@ -401,11 +425,11 @@ initGUI <- function() {
 
       #print(result_react())
       evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react(), booked_column_name, audit_column_name, formData$data$confidence, formData$data$estimation_method))
-      #print(result_react())
+      #print(evaluation_react())
 
       output$dataTableEvaluate <- renderTable({
         #shinyjs::html("feedback2", "")
-        as.data.frame(evaluation_react())
+        as.data.frame(nicer_number_view(evaluation_react()))
       })
 
 
@@ -426,7 +450,7 @@ initGUI <- function() {
 
       #new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
 
-      unitsToExamine <- unitsToSample(data_react(), selected_column(), primaryKey, result_react())
+      unitsToExamine <- unitsToSample(data_react(), selected_column(), primaryKey, samplingDesign_react())
       #print(unitsToExamine)
 
       sampleUnits_react(unitsToExamine)
@@ -440,7 +464,7 @@ initGUI <- function() {
 
       output$dataTableEvaluate <- renderTable({
         #shinyjs::html("feedback2", "")
-        as.data.frame(evaluation_react())
+        as.data.frame(nicer_number_view(evaluation_react()))
       })
 
       precision <- max(evaluation_react()$precision, na.rm = TRUE)
@@ -523,7 +547,7 @@ initGUI <- function() {
 
       output$dataTable <- renderTable({
         shinyjs::html("feedback", "")
-        as.data.frame(strata)
+        as.data.frame(nicer_number_view(strata))
       })
 
       samplingDesign_react(strata)
