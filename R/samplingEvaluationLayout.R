@@ -287,7 +287,7 @@ samplingEvaluation_GUI <- function() {
 
       output$dataTableEvaluate <- renderTable({
         #shinyjs::html("feedback2", "")
-        as.data.frame(evaluation_react())
+        as.data.frame(nicer_number_view(evaluation_react()))
       })
 
 
