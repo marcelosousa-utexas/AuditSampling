@@ -78,6 +78,7 @@ show_warning_yes_no <- function (achieved_precision, desired_precision) {
 
   showModal(modalDialog(
     title = "Important message",
+    #uiOutput("warning")
     div(id = "textmsg", paste(text)),
     footer = tagList(
       actionButton("no", "No"),

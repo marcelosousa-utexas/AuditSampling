@@ -39,10 +39,10 @@ samplingGenerator_GUI <- function() {
                              sliderInput("confidence", "Conficende Level", min = 0.50, max = 0.99, value = 0.95, step = 0.01), # Step size changed to 0.01
                              #sliderInput("L", "Sequence Intervals", min = 3, max = 20, value = 3, step = 1),  New scrollbar for sequence
                              sliderInput("L", "Sequence Intervals", min = 3, max = 20, value = c(5, 7)),
-                             actionButton("submit", "Submit")
+                             actionButton("submit", "Stratify")
                            ),
 
-                           tabPanel(
+                           mainPanel(
                              div(id = "feedback"), # This will display the feedback message
                              tableOutput("dataTable"), # This will display the table
                              downloadButton("downloadDesign", "Download Sampling Design"), # This will create the download button
@@ -94,6 +94,18 @@ samplingGenerator_GUI <- function() {
     userResponse <- reactiveVal(NULL)
 
 
+    # output$warning <- renderUI({
+    #   mainPanel(
+    #     numericInput("precision", "Desired precision", value = 928003.97),
+    #     numericInput("n_min", "Global minimum n", value = 30),
+    #     numericInput("ni_min", "Minimum n per stratum", value = 5),
+    #     selectInput("estimation_method", "Estimation method", choices = c("mean", "difference")),
+    #     selectInput("allocation_method", "Allocation method", choices = c("Neyman", "proportional")),
+    #     sliderInput("confidence", "Confidence Level", min = 0.50, max = 0.99, value = 0.95, step = 0.01),
+    #     sliderInput("L", "Sequence Intervals", min = 3, max = 20, value = c(5, 7)),
+    #     actionButton("submit", "Submit")
+    #   )
+    # })
 
     observeEvent(input$no, {
       userResponse("No")
