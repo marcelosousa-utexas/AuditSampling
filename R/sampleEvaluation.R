@@ -311,31 +311,12 @@ add_ni_strata <- function(strata, max_index) {
 
 take_more_samples <-  function (my_data, data_column_name, booked_column_name, audit_column_name, desired_precision, strata, unitsToExamine, eval_dataframe, confidence = 0.95, estimation_method = "mean", t_Student = FALSE) {
 
-
-  #print(my_data)
-  #print(result$optimum_result$bins[[1]])
-  #print(eval_dataframe)
-
-  # bins <- result$optimum_result$bins[[1]]
-  #strata <- result$sample_planning
-  #
-  # my_data <- my_data %>%
-  #   mutate(
-  #     Stratum = as.character(cut(!!sym(data_column_name), breaks = bins, labels = FALSE, include.lowest = TRUE)),
-  #     Stratum = ifelse(is.na(Stratum), "Censo", Stratum)
-  #   )
-
-  # if ("Audited_Values" %in% names(unitsToExamine)) {
-  #   unitsToExamine <- unitsToExamine %>% select(-Audited_Values)
-  # }
-
   temp_eval_dataframe <- eval_dataframe
 
   eval_verification <- eval_dataframe %>%
     filter(grepl("^\\d+$", Stratum))
 
   sample_achieved_precision <- max(eval_dataframe$precision, na.rm = TRUE)
-
 
   while (sample_achieved_precision > desired_precision) {
 

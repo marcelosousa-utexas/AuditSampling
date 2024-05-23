@@ -1,4 +1,4 @@
-unitsToSample <- function(my_data, data_column_name, primaryKey, sample_planning) {
+unitsToSample <- function(my_data, data_column_name, primaryKey, sample_planning, booked_column_name = "Booked_Values", audit_column_name = "Audited_Values") {
 
   censo <- my_data %>%
     filter(Stratum == "Censo")  %>%
@@ -41,23 +41,22 @@ unitsToSample <- function(my_data, data_column_name, primaryKey, sample_planning
 
   audit_units <- audit_units %>%
     mutate(
-      Booked_Values = !!sym(data_column_name),
+      !!sym(booked_column_name) :=  !!sym(data_column_name),
       #Audited_Values = !!sym(data_column_name)
-      Audited_Values = NA
+      #!!sym(audit_column_name) :=  NA
     )
 
-  # if (!(audited_column %in% names(audit_units))) {
-  #   print("not in column1")
-  #   audit_units <- audit_units %>%
-  #     mutate(!!sym(audited_column) := "")
-  # }
+  if (!(audit_column_name %in% names(audit_units))) {
+    audit_units <- audit_units %>%
+      mutate(!!sym(audit_column_name) := NA)
+  }
 
 
   return(audit_units)
 }
 
 
-moreUnitsToSample <- function(dataframe, data_column_name, primaryKey, unitsToSample, ni) {
+moreUnitsToSample <- function(dataframe, data_column_name, primaryKey, unitsToSample, ni, booked_column_name = "Booked_Values", audit_column_name = "Audited_Values") {
 
   #print(unitsToSample)
   # Define the column name to check
@@ -107,13 +106,9 @@ moreUnitsToSample <- function(dataframe, data_column_name, primaryKey, unitsToSa
 
   audit_units <- bind_rows(unitsToSample, sample_data)
 
-  #audit_units <- merge(dataframe, unitsToSample, by = primaryKey, all = TRUE)
-
-  print(audit_units)
-  print("audit_units")
 
   audit_units <- audit_units %>%
-    mutate(Booked_Values = ifelse(is.na(Booked_Values), !!sym(data_column_name), Booked_Values)) %>%
+    mutate(!!sym(booked_column_name) :=  ifelse(is.na(!!sym(booked_column_name)), !!sym(data_column_name), !!sym(booked_column_name))) %>%
     # mutate(
     #   Booked_Values = !!sym(data_column_name)
     #   #Audited_Values = ""

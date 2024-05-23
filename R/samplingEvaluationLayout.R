@@ -271,7 +271,9 @@ samplingEvaluation_GUI <- function() {
         select(-unitToSample)
 
       new_samples <- take_more_samples(my_data, selected_column(), booked_column_name, audit_column_name,  parameters_react()$precision, samplingDesign_react(), unitsToExamine, evaluation_react(), parameters_react()$confidence, parameters_react()$estimation_method)
+
       new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
+
 
       new_ni <- new_samples$eval_dataframe %>%
         filter(grepl("^\\d+$", Stratum)) %>%

@@ -313,6 +313,7 @@ samplingGenerator_GUI <- function() {
       unitsToExamine <- unitsToSample(data_react(), selected_column(), primaryKey, samplingDesign_react())
       sampleUnits_react(unitsToExamine)
       new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
+
       evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react(), booked_column_name, audit_column_name, formData$data$confidence, formData$data$estimation_method))
 
       output$dataTableEvaluate <- renderTable({
