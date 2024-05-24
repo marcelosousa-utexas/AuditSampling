@@ -12,7 +12,7 @@ read_data_file <- function (filepath) {
   if (file_extension %in% excel_extensions) {
     df <- read_excel(filepath)
   } else if (file_extension %in% c("csv")) {
-    df <- read.csv(filepath)
+    df <- read_csv(filepath, show_col_types = FALSE)
   } else {
     # Code to execute if the file extension is neither Excel nor CSV
     stop("Extension not supported.")
@@ -100,6 +100,19 @@ show_warning_msg <- function (old_n, new_n, achieved_precision, desired_precisio
     footer = tagList(
       actionButton("ok", "OK")
     )
+  ))
+
+}
+
+
+show_warning_minimal_ni <- function () {
+
+  #text = paste("Achieved Precision from the sample was ", achieved_precision, ", which is greater than the planned precision of ", desired_precision ,". Do you want to increase your sample size to match the specifications?")
+  text = "The minimal allowed value for the minimal sample size of each stratum is 2."
+
+  showModal(modalDialog(
+    title = "Warning",
+    div(id = "textmsg", paste(text)),
   ))
 
 }

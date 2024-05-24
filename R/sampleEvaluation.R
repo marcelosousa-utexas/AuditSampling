@@ -34,7 +34,7 @@ evaluate_sample <- function(sample_planning, unitsToExamine, booked_column_name 
 
   ### FUNCTION DEFINITION
 
-  contagem_function <- function(Booked_Values, Audit_Values) {
+  error_count_function <- function(Booked_Values, Audit_Values) {
     difference <- Booked_Values - Audit_Values
     non_zero_count <- sum(difference != 0)
     return(non_zero_count)
@@ -146,8 +146,8 @@ evaluate_sample <- function(sample_planning, unitsToExamine, booked_column_name 
   sample_result <- sample_data %>%
     mutate(Stratum = as.numeric(Stratum)) %>%
     group_by(Stratum) %>%
-    #summarise(nsample = n(), sum_booked = sum(Booked_Values), sum_audited = sum(Audit_Values),  mean = mean(Audit_Values), sd = sd(Audit_Values), contagem = contagem_function(Booked_Values,Audit_Values))
-    summarise(nsample = n(), sum_booked = sum(!!sym(booked_column_name)), sum_audited = sum(!!sym(audit_column_name)),  mean = calculate_mean(estimation_method, !!sym(booked_column_name), !!sym(audit_column_name)), sd = calculate_sd(estimation_method, !!sym(booked_column_name), !!sym(audit_column_name)), contagem = contagem_function(!!sym(booked_column_name), !!sym(audit_column_name)))
+    #summarise(nsample = n(), sum_booked = sum(Booked_Values), sum_audited = sum(Audit_Values),  mean = mean(Audit_Values), sd = sd(Audit_Values), error_count = error_count_function(Booked_Values,Audit_Values))
+    summarise(nsample = n(), sum_booked = sum(!!sym(booked_column_name)), sum_audited = sum(!!sym(audit_column_name)),  mean = calculate_mean(estimation_method, !!sym(booked_column_name), !!sym(audit_column_name)), sd = calculate_sd(estimation_method, !!sym(booked_column_name), !!sym(audit_column_name)), error_count = error_count_function(!!sym(booked_column_name), !!sym(audit_column_name)))
 
   #sample_result
   #sample_result$strata <- as.numeric(sample_result$strata)
@@ -203,7 +203,7 @@ evaluate_sample <- function(sample_planning, unitsToExamine, booked_column_name 
       #diff_sum = sum(diff_sum),
       #mean_diff = sum(mean_diff),
       sd = sum(sd),
-      contagem = sum(contagem)
+      error_count = sum(error_count)
 
     ) %>%
     select(-var_estimate, -var_mean)
@@ -222,7 +222,7 @@ evaluate_sample <- function(sample_planning, unitsToExamine, booked_column_name 
       sum_pop = sum(!!sym(booked_column_name)),
       sum_booked = sum(!!sym(booked_column_name)),
       sum_audited = sum(!!sym(audit_column_name)),
-      contagem = contagem_function(!!sym(booked_column_name), !!sym(audit_column_name)),
+      error_count = error_count_function(!!sym(booked_column_name), !!sym(audit_column_name)),
       #exp_sd_error = "-",
       #sd = "-",
       #precision = "-"
@@ -252,7 +252,7 @@ evaluate_sample <- function(sample_planning, unitsToExamine, booked_column_name 
               sum_pop = sum(sum_pop),
               sum_booked = sum(sum_booked),
               sum_audited = sum(sum_audited),
-              contagem = sum(contagem)
+              error_count = sum(error_count)
     )
 
   strata <- bind_rows(strata, total_line)
@@ -267,7 +267,7 @@ evaluate_sample <- function(sample_planning, unitsToExamine, booked_column_name 
     relocate(sum_audited, .after = sum_booked) %>%
     #relocate(diff_sum, .after = sum_audited) %>%
     #relocate(exp_audited, .after = diff_sum) %>%
-    relocate(contagem, .after = precision)
+    relocate(error_count, .after = precision)
 
   sample_result <- data.frame(sample_result)
   #print(sample_result)
@@ -278,7 +278,7 @@ evaluate_sample <- function(sample_planning, unitsToExamine, booked_column_name 
   #
   # # Apply the format_column function to all columns in the dataframe
   # sample_result  <- sample_result %>%
-  #   mutate_at(vars(-one_of("Stratum", "npop", "nsample", "contagem")), format_column) %>%
+  #   mutate_at(vars(-one_of("Stratum", "npop", "nsample", "error_count")), format_column) %>%
   #   mutate(
   #     npop =  formatC(npop, format = "f", big.mark = ".", decimal.mark = ",", digits = 0),
   #     Stratum = ifelse(is.na(Stratum), "Total", Stratum)

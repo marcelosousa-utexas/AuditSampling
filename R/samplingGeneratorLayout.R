@@ -32,8 +32,9 @@ samplingGenerator_GUI <- function() {
                            sidebarPanel(
                              #numericInput("precision", "Desired precision", value = 1925441129.31),
                              numericInput("precision", "Desired precision", value = 928003.97),
+                             numericInput("user_cutoff", "Cut off value", value = 0),
                              numericInput("n_min", "Global minimum n", value = 30),
-                             numericInput("ni_min", "Minimum n per stratum", value = 5),
+                             numericInput("ni_min", "Minimum n per stratum", value = 5, min = 2),
                              selectInput("estimation_method", "Estimation method", choices = c("mean", "difference")),
                              selectInput("allocation_method", "Allocation method", choices = c("Neyman", "proportional")),
                              sliderInput("confidence", "Conficende Level", min = 0.50, max = 0.99, value = 0.95, step = 0.01), # Step size changed to 0.01
@@ -72,6 +73,7 @@ samplingGenerator_GUI <- function() {
     shinyjs::hide("file1")
     shinyjs::hide("next_button")
 
+    initial_update_done <- reactiveVal(FALSE)
     sample_data_react <- reactiveVal(TRUE)
     parameters_reac <- reactiveVal(NULL)
     result_react <- reactiveVal(NULL)
@@ -83,15 +85,34 @@ samplingGenerator_GUI <- function() {
     is_new_sample_react <- reactiveVal(NULL)
     is_new_sample_react(FALSE)
 
-    primaryKey = "primaryKey"
-    booked_column_name = "Booked_Values"
-    audit_column_name = "Audited_Values"
+    primaryKey <- "primaryKey"
+    booked_column_name <- "Booked_Values"
+    audit_column_name <- "Audited_Values"
+    relative_precision <- 0.1 # standard value for precision is 10% of the total values
+    relative_cut_off <- 0.05 # standard value for the cut off is 5% of the precision
 
     formData <- reactiveValues(data = list())
     data_react <- reactiveVal()
     new_data_react <- reactiveVal()
     #userResponse <- reactiveValues(response = NULL)
     userResponse <- reactiveVal(NULL)
+
+
+    update_initial_values <- function() {
+
+      observeEvent(initial_update_done(), {
+        if (!initial_update_done()) {
+          # Set the default value of new_precision to the value of precision
+          #input$precision =
+          updated_precision <- round(sum(data_react()[[selected_column()]])*relative_precision, 2)
+          updateNumericInput(session, "precision", value = updated_precision)
+          updateNumericInput(session, "user_cutoff", value = round(updated_precision*relative_cut_off, 2))
+          # Mark the initial update as done
+          initial_update_done(TRUE)
+        }
+      }, once = TRUE)
+
+    }
 
 
     # output$warning <- renderUI({
@@ -103,9 +124,20 @@ samplingGenerator_GUI <- function() {
     #     selectInput("allocation_method", "Allocation method", choices = c("Neyman", "proportional")),
     #     sliderInput("confidence", "Confidence Level", min = 0.50, max = 0.99, value = 0.95, step = 0.01),
     #     sliderInput("L", "Sequence Intervals", min = 3, max = 20, value = c(5, 7)),
-    #     actionButton("submit", "Submit")
+    #     actionButton("submit", "Submit")1
     #   )
     # })
+
+    # observe({
+    #   updateNumericInput(session, "user_cutoff", value = input$precision)
+    # })
+
+    observe({
+      if (input$ni_min < 2) {
+        updateNumericInput(session, "ni_min", value = 2)
+        show_warning_minimal_ni()
+      }
+    })
 
     observeEvent(input$no, {
       userResponse("No")
@@ -286,7 +318,9 @@ samplingGenerator_GUI <- function() {
       })
 
       updateSelectInput(session, "column_selector", "Select a column", choices = colnames(df))
+      #update_initial_values()
       shinyjs::show("next_button")
+
 
     })
 
@@ -310,7 +344,9 @@ samplingGenerator_GUI <- function() {
     observeEvent(input$next_button, {
       hideTab(inputId = "tabs", target = "Input Data")
       hideTab(inputId = "tabs", target = "Evaluation")
+      update_initial_values()
       showTab(inputId = "tabs", target = "Sampling")
+
 
     })
 
@@ -383,6 +419,7 @@ samplingGenerator_GUI <- function() {
       #observeEvent(input$submit, {
       formData$data <- list(
         precision = input$precision,
+        user_cutoff = input$user_cutoff,
         n_min = input$n_min,
         ni_min = input$ni_min,
         estimation_method = input$estimation_method,
@@ -395,7 +432,7 @@ samplingGenerator_GUI <- function() {
         my_data = my_data, # Corrected
         data_column_name = data_column_name, # Corrected
         #user_cutoff =  formData$data$precision/2,
-        #user_cutoff =  35000,
+        user_cutoff =  formData$data$user_cutoff,
         estimation_method = formData$data$estimation_method,
         allocation_method = formData$data$allocation_method,
         L = formData$data$L,
