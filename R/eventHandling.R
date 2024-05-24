@@ -1,3 +1,76 @@
+.AuditSampling_env <- new.env()
+
+setClass("columnNames", slots = list(
+  primaryKey = "character",
+  booked_column_name = "character",
+  audit_column_name = "character"
+))
+
+
+# Constructor function to create instances of GlobalVariables class
+columnNames <- function(primaryKey, booked_column_name, audit_column_name) {
+  obj <- new(
+    "columnNames",
+    primaryKey =  primaryKey,
+    booked_column_name =  booked_column_name,
+    audit_column_name =  audit_column_name
+  )
+  return(obj)
+}
+
+# Setter method to set multiple attributes at once
+setValues <- function(values) {
+#setValues <- function(obj, values) {
+  # Check if values is a list
+  if (!is.list(values)) {
+    stop("Input must be a list of values.")
+  }
+
+  # Check each value and set corresponding slot
+  if ("primaryKey" %in% names(values)) {
+    primaryKey <- values[["primaryKey"]]
+    if (!is.character(primaryKey)) {
+      stop("PrimaryKey must be a non-negative numeric value.")
+    }
+    #obj@primaryKey <- primaryKey
+    .AuditSampling_env$col_data@primaryKey <- primaryKey
+  }
+
+  if ("booked_column_name" %in% names(values)) {
+    booked_column_name <- values[["booked_column_name"]]
+    if (!is.character(booked_column_name)) {
+      stop("Booked Values must be a character value.")
+    }
+    #obj@booked_column_name <- booked_column_name
+    .AuditSampling_env$col_data@booked_column_name <- booked_column_name
+  }
+
+  if ("audit_column_name" %in% names(values)) {
+    audit_column_name <- values[["audit_column_name"]]
+    if (!is.character(audit_column_name)) {
+      stop("Audited Values must be a character value.")
+    }
+    #obj@Audited_Values <- Audited_Values
+    .AuditSampling_env$col_data@audit_column_name <- audit_column_name
+  }
+
+  #return(obj)
+}
+
+
+getPrimaryKey <- function() {
+  return(.AuditSampling_env$col_data@primaryKey)
+}
+
+getBookedColumnName <- function() {
+  return(.AuditSampling_env$col_data@booked_column_name)
+}
+
+getAuditedColumnName <- function() {
+  return(.AuditSampling_env$col_data@audit_column_name)
+}
+
+
 
 read_data_file <- function (filepath) {
 

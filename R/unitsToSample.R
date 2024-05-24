@@ -1,6 +1,6 @@
 unitsToSample <- function(my_data, data_column_name, primaryKey, sample_planning, booked_column_name = "Booked_Values", audit_column_name = "Audited_Values") {
 
-  censo <- my_data %>%
+  census <- my_data %>%
     filter(Stratum == "Censo")  %>%
     arrange(Stratum, !!sym(data_column_name) )
 
@@ -36,7 +36,7 @@ unitsToSample <- function(my_data, data_column_name, primaryKey, sample_planning
     arrange(!!sym(data_column_name)) %>%
     relocate(!!sym(primaryKey))
 
-  audit_units <- rbind(sample_data, censo)
+  audit_units <- rbind(sample_data, census)
 
 
   audit_units <- audit_units %>%

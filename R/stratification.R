@@ -1,3 +1,8 @@
+stratification_env <- new.env()
+stratification_env$primaryKey <- NULL
+stratification_env$booked_column_name <- NULL
+stratification_env$audit_column_name <- NULL
+
 
 get_bounds_from_vector <- function(data) {
   if (!is.numeric(data)) {
@@ -109,13 +114,13 @@ dataframe_cutoff <- function(dataframe, data_column_name, bounds) {
   lower_bound <- bounds$lower_bound[[1]]
   upper_bound <- bounds$upper_bound[[1]]
 
-  censo <- dataframe %>%
+  census <- dataframe %>%
     filter( !!sym(data_column_name) <= lower_bound | !!sym(data_column_name)  >= upper_bound)
 
   dataframe <- dataframe %>%
     filter( !!sym(data_column_name)  > lower_bound & !!sym(data_column_name) < upper_bound)
 
-  return(list(censo = censo, dataframe = dataframe))
+  return(list(census = census, dataframe = dataframe))
 }
 
 
@@ -654,6 +659,9 @@ build_optimum_result <- function (best_n_dataframe) {
 
 build_final_strata <- function(best_n_dataframe, estimation_method, p1, my_data, data_column_name){
 
+  print(stratification_env$primaryKey)
+  print("stratification_env$primaryKey here")
+
   cut_off <- best_n_dataframe$cut_off[[1]]
   iter <- best_n_dataframe$iter[[1]]
   sub_strata <- best_n_dataframe$strata[[1]]
@@ -788,6 +796,20 @@ build_final_strata_update <- function(dataframe, new_ni){
 }
 
 execute <- function (my_data, data_column_name, user_cutoff = desired_precision/2, estimation_method = "mean", allocation_method = "Neyman", L = seq(10,10), confidence = 0.95, desired_precision = sum(my_data[data_column_name])*0.02 , n_min = 30, ni_min = 5, break_n = 3) {
+
+
+  #primaryKey <- getPrimaryKey()
+  #booked_column_name <- getBookedColumnName()
+  #audit_column_name <- getAuditedColumnName()
+
+
+  stratification_env$primaryKey <- getPrimaryKey()
+  stratification_env$booked_column_name <- getBookedColumnName()
+  stratification_env$audit_column_name <- getAuditedColumnName()
+
+  print(stratification_env$primaryKey)
+  print("stratification_env$primaryKey in execute")
+
 
   print(paste("Desired precision:", desired_precision))
   print(paste("Cutoff :", user_cutoff))

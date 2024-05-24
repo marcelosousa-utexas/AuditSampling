@@ -53,6 +53,10 @@ samplingEvaluation_GUI <- function() {
     booked_column_name = "Booked_Values"
     audit_column_name = "Audited_Values"
 
+    columnNamesClass <- columnNames(primaryKey = primaryKey, booked_column_name = booked_column_name, audit_column_name = audit_column_name)
+    assign("col_data", columnNamesClass, envir = .AuditSampling_env)
+    print(.AuditSampling_env$col_data)
+
     new_data_react <- reactiveVal(NULL)
     parameters_react <- reactiveVal(NULL)
     sample_units_data_react <- reactiveVal(NULL)
