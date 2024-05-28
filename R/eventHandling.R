@@ -3,17 +3,23 @@
 setClass("columnNames", slots = list(
   primaryKey = "character",
   booked_column_name = "character",
-  audit_column_name = "character"
+  audit_column_name = "character",
+  data_column_name = "character",
+  stratum_name = "character",
+  higher_values = "character"
 ))
 
 
 # Constructor function to create instances of GlobalVariables class
-columnNames <- function(primaryKey, booked_column_name, audit_column_name) {
+columnNames <- function(primaryKey, booked_column_name, audit_column_name, data_column_name, stratum_name, higher_values) {
   obj <- new(
     "columnNames",
     primaryKey =  primaryKey,
     booked_column_name =  booked_column_name,
-    audit_column_name =  audit_column_name
+    audit_column_name =  audit_column_name,
+    data_column_name = data_column_name,
+    stratum_name = stratum_name,
+    higher_values = higher_values
   )
   return(obj)
 }
@@ -54,6 +60,33 @@ setValues <- function(values) {
     .AuditSampling_env$col_data@audit_column_name <- audit_column_name
   }
 
+  if ("data_column_name" %in% names(values)) {
+    data_column_name <- values[["data_column_name"]]
+    if (!is.character(data_column_name)) {
+      stop("Data column name of data must be a character value.")
+    }
+    #obj@Audited_Values <- Audited_Values
+    .AuditSampling_env$col_data@data_column_name <- data_column_name
+  }
+
+  if ("stratum_name" %in% names(values)) {
+    stratum_name <- values[["stratum_name"]]
+    if (!is.character(stratum_name)) {
+      stop("Stratum name must be a character value.")
+    }
+    #obj@Audited_Values <- Audited_Values
+    .AuditSampling_env$col_data@stratum_name <- stratum_name
+  }
+
+  if ("higher_values" %in% names(values)) {
+    higher_values <- values[["higher_values"]]
+    if (!is.character(higher_values)) {
+      stop("Higher values name must be a character value.")
+    }
+    #obj@Audited_Values <- Audited_Values
+    .AuditSampling_env$col_data@higher_values <- higher_values
+  }
+
   #return(obj)
 }
 
@@ -70,6 +103,17 @@ getAuditedColumnName <- function() {
   return(.AuditSampling_env$col_data@audit_column_name)
 }
 
+getDataColumnName <- function() {
+  return(.AuditSampling_env$col_data@data_column_name)
+}
+
+getStratumName <- function() {
+  return(.AuditSampling_env$col_data@stratum_name)
+}
+
+getHigherValues <- function() {
+  return(.AuditSampling_env$col_data@higher_values)
+}
 
 
 read_data_file <- function (filepath) {
@@ -189,3 +233,5 @@ show_warning_minimal_ni <- function () {
   ))
 
 }
+
+

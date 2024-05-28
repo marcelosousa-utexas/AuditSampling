@@ -1,7 +1,7 @@
-stratification_env <- new.env()
-stratification_env$primaryKey <- NULL
-stratification_env$booked_column_name <- NULL
-stratification_env$audit_column_name <- NULL
+#stratification_env <- new.env()
+#stratification_env$primaryKey <- NULL
+#stratification_env$booked_column_name <- NULL
+#stratification_env$audit_column_name <- NULL
 
 
 get_bounds_from_vector <- function(data) {
@@ -449,9 +449,9 @@ build_strata <- function(my_data_ref, data_column_name, dataframe, boundaries, e
   bins <- c(boundaries$xmin, tail(boundaries$xmax, n = 1))
 
   strata <- my_data_ref %>%
-    mutate(Stratum = cut(!!sym(data_column_name), breaks = bins, labels = rownames(boundaries), include.lowest = TRUE)) %>%
-    filter(!is.na(Stratum)) %>%
-    group_by(Stratum) %>%
+    mutate(!!sym(getStratumName()) := cut(!!sym(data_column_name), breaks = bins, labels = rownames(boundaries), include.lowest = TRUE)) %>%
+    filter(!is.na(!!sym(getStratumName()) )) %>%
+    group_by(!!sym(getStratumName()) ) %>%
     summarise(
       mean = sum((!!sym(data_column_name)))/n(),
       Sum_Squares = sum((!!sym(data_column_name))**2),
@@ -478,7 +478,7 @@ build_strata <- function(my_data_ref, data_column_name, dataframe, boundaries, e
       pi = ni/sum(ni),
       SDE = npop*sd/sqrt(ni)*sqrt((npop -ni)/npop)
     ) %>%
-    relocate(Stratum, xmin, xmax)
+    relocate(!!sym(getStratumName()) , xmin, xmax)
 
   #print(strata)
   return(strata)
@@ -659,8 +659,8 @@ build_optimum_result <- function (best_n_dataframe) {
 
 build_final_strata <- function(best_n_dataframe, estimation_method, p1, my_data, data_column_name){
 
-  print(stratification_env$primaryKey)
-  print("stratification_env$primaryKey here")
+  print(getPrimaryKey())
+  print("getPrimaryKey() here")
 
   cut_off <- best_n_dataframe$cut_off[[1]]
   iter <- best_n_dataframe$iter[[1]]
@@ -668,7 +668,7 @@ build_final_strata <- function(best_n_dataframe, estimation_method, p1, my_data,
 
   sub_totals <- sub_strata %>%
     summarise(
-      Stratum = "Sub Total",
+      !!sym(getStratumName()) := "Sub Total",
       #sd = sqrt(sum(npop*(npop - ni) * sd**2 / ni)/sum(npop)**2),
       sd = sqrt((sum(npop**2 * sd**2/ni)/(sum(npop)**2)) - (sum(npop * sd**2)/(sum(npop)**2))),
       SDE = sqrt(sum(SDE**2)),
@@ -684,14 +684,14 @@ build_final_strata <- function(best_n_dataframe, estimation_method, p1, my_data,
 
   sub_strata_censu <- my_data %>%
     filter((!!sym(data_column_name)) > cut_off) %>%
-    mutate(Stratum = "Censo")
+    mutate(!!sym(getStratumName()) := getHigherValues())
 
   #print(sub_strata_censu)
 
   sub_strata_censu <- sub_strata_censu %>%
-    group_by(Stratum) %>%
+    group_by(!!sym(getStratumName())) %>%
     summarise(
-      Stratum = "Censo",
+      !!sym(getStratumName()) := getHigherValues(),
       Total = sum((!!sym(data_column_name))),
       xmin = max(sub_strata$xmax),
       xmax = max(max(my_data[[data_column_name]])),
@@ -711,8 +711,8 @@ build_final_strata <- function(best_n_dataframe, estimation_method, p1, my_data,
   }
 
   total_line <- strata %>%
-    filter(!(Stratum == "Sub Total")) %>%
-    summarise(Stratum = "Total",
+    filter(!(!!sym(getStratumName()) == "Sub Total")) %>%
+    summarise(!!sym(getStratumName()) := "Total",
               #sd = sqrt(sum(npop*(npop - ni) * sd**2 / ni)/sum(npop)**2),
               #sd = sqrt((sum(npop**2 * sd**2/ni)/(sum(npop)**2)) - (sum(npop * sd**2)/(sum(npop)**2))),
               sd = sub_totals$sd,
@@ -740,7 +740,7 @@ build_final_strata <- function(best_n_dataframe, estimation_method, p1, my_data,
 build_final_strata_update <- function(dataframe, new_ni){
 
   strata <- dataframe %>%
-    filter(grepl("^\\d+$", Stratum)) %>%
+    filter(grepl("^\\d+$", !!sym(getStratumName()))) %>%
     ungroup() %>%
     mutate(
       ni = new_ni,
@@ -751,7 +751,7 @@ build_final_strata_update <- function(dataframe, new_ni){
 
   sub_totals <- strata %>%
     summarise(
-      Stratum = "Sub Total",
+      !!sym(getStratumName()) := "Sub Total",
       #sd = sqrt(sum(npop*(npop - ni) * sd**2 / ni)/sum(npop)**2),
       sd = sqrt((sum(npop**2 * sd**2/ni)/(sum(npop)**2)) - (sum(npop * sd**2)/(sum(npop)**2))),
       SDE = sqrt(sum(SDE**2)),
@@ -764,7 +764,7 @@ build_final_strata_update <- function(dataframe, new_ni){
     )
 
   sub_strata_censu <- dataframe %>%
-    filter(Stratum == "Censo")
+    filter(!!sym(getStratumName()) == getHigherValues())
 
   if (length(sub_strata_censu$npop) > 0) {
     strata <- bind_rows(strata, sub_totals, sub_strata_censu)
@@ -773,8 +773,8 @@ build_final_strata_update <- function(dataframe, new_ni){
   }
 
   total_line <- strata %>%
-    filter(!(Stratum == "Sub Total")) %>%
-    summarise(Stratum = "Total",
+    filter(!(!!sym(getStratumName()) == "Sub Total")) %>%
+    summarise(!!sym(getStratumName()) := "Total",
               #sd = sqrt(sum(npop*(npop - ni) * sd**2 / ni)/sum(npop)**2),
               #sd = sqrt((sum(npop**2 * sd**2/ni)/(sum(npop)**2)) - (sum(npop * sd**2)/(sum(npop)**2))),
               sd = sub_totals$sd,
@@ -795,20 +795,28 @@ build_final_strata_update <- function(dataframe, new_ni){
 
 }
 
-execute <- function (my_data, data_column_name, user_cutoff = desired_precision/2, estimation_method = "mean", allocation_method = "Neyman", L = seq(10,10), confidence = 0.95, desired_precision = sum(my_data[data_column_name])*0.02 , n_min = 30, ni_min = 5, break_n = 3) {
+execute <- function (my_data, data_column_name, user_cutoff = desired_precision/2, estimation_method = "mean", allocation_method = "Neyman", L = seq(10,10), confidence = 0.95,
+                     desired_precision = sum(my_data[data_column_name])*0.02 , n_min = 30, ni_min = 5, break_n = 3,
+                     primaryKey = "primaryKey", booked_column_name = "Booked_Values", audit_column_name = "Audited_Values") {
 
+  stratum_name <- "Stratum"
+  higher_values <- "Census"
 
-  #primaryKey <- getPrimaryKey()
-  #booked_column_name <- getBookedColumnName()
-  #audit_column_name <- getAuditedColumnName()
+  columnNamesClass <- columnNames(primaryKey = primaryKey, booked_column_name = booked_column_name, audit_column_name = audit_column_name, data_column_name = data_column_name, stratum_name = stratum_name, higher_values = higher_values)
 
+  assign("col_data", columnNamesClass, envir = .AuditSampling_env)
+  print(.AuditSampling_env$col_data)
 
-  stratification_env$primaryKey <- getPrimaryKey()
-  stratification_env$booked_column_name <- getBookedColumnName()
-  stratification_env$audit_column_name <- getAuditedColumnName()
+  # primaryKey <- getPrimaryKey()
+  # print(primaryKey)
+  # print("primaryKey in execute")
+  # booked_column_name <- getBookedColumnName()
+  # audit_column_name <- getAuditedColumnName()
+  #
 
-  print(stratification_env$primaryKey)
-  print("stratification_env$primaryKey in execute")
+  #stratification_env$primaryKey <- getPrimaryKey()
+  #stratification_env$booked_column_name <- getBookedColumnName()
+  #stratification_env$audit_column_name <- getAuditedColumnName()
 
 
   print(paste("Desired precision:", desired_precision))
@@ -887,13 +895,13 @@ updateDateBase <- function(dataframe, data_column_name, primaryKey, bins) {
 
   updatedDataframe <- dataframe %>%
     mutate(
-      !!sym(primaryKey) := row_number(),
-      Stratum = as.character(cut(!!sym(data_column_name), breaks = bins, labels = FALSE, include.lowest = TRUE)),
-      Stratum = ifelse(is.na(Stratum), "Censo", Stratum)
+      !!sym(getPrimaryKey()) := row_number(),
+      !!sym(getStratumName()) := as.character(cut(!!sym(getDataColumnName()), breaks = bins, labels = FALSE, include.lowest = TRUE)),
+      !!sym(getStratumName()) := ifelse(is.na(!!sym(getStratumName())), getHigherValues(), !!sym(getStratumName()))
     ) %>%
-    relocate(Stratum) %>%
-    relocate(!!sym(primaryKey)) %>%
-    arrange(Stratum, !!sym(data_column_name))
+    relocate(!!sym(getStratumName()) ) %>%
+    relocate(!!sym(getPrimaryKey())) %>%
+    arrange(!!sym(getStratumName()), !!sym(data_column_name))
 
   return(updatedDataframe)
 
