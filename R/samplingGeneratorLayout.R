@@ -381,6 +381,7 @@ samplingGenerator_GUI <- function() {
       output$dataTableEvaluate <- renderTable({
         #shinyjs::html("feedback2", "")
         as.data.frame(nicer_number_view(evaluation_react()))
+        #as.data.frame(evaluation_react())
       })
 
 
@@ -454,7 +455,7 @@ samplingGenerator_GUI <- function() {
         desired_precision = formData$data$precision,
         n_min = formData$data$n_min,
         ni_min = formData$data$ni_min,
-        break_n = 10))
+        break_n = 3))
 
       strata <- result_react()$sample_planning %>%
         select(-Sum_Squares)
@@ -462,6 +463,7 @@ samplingGenerator_GUI <- function() {
       output$dataTable <- renderTable({
         shinyjs::html("feedback", "")
         as.data.frame(nicer_number_view(strata))
+        #as.data.frame(strata)
       })
 
       samplingDesign_react(strata)

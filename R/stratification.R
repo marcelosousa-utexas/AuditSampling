@@ -266,7 +266,7 @@ interpolate_duplicates <- function(vec) {
 }
 
 
-get_best_cum_freq <- function(allocation_method, dataframe, L) {
+get_best_cum_freq <- function(allocation_method, dataframe, L, user_cutoff) {
 
   if (allocation_method  == "Neyman") {
     cum_total <- dataframe$csqrtf
@@ -315,9 +315,15 @@ get_best_cum_freq <- function(allocation_method, dataframe, L) {
 
       best_bound <- dataframe$xmax[index]
     }
+
     boundaries[i] <- best_bound
 
   }
+
+  bins <- c(min(dataframe$xmin), boundaries, min(max(dataframe$xmax), user_cutoff))
+  bins <- interpolate_duplicates(bins)
+  bins <- bins[-c(1, length(bins))]
+  boundaries <- bins
 
   return(boundaries)
 
@@ -339,24 +345,24 @@ calculate_sd <- function(estimation_method, Sum_Squares, npop, mean, p1 = NULL) 
 
 }
 
+
 round_ni <- function(ni, n, n_min, ni_min) {
 
-  floor_ni <- floor(ni)
   decimal_ni <- ni - floor(ni)
   round_up <- numeric(length(ni))
+
+  # if (sum(floor(ni)) == sum(ni)) {
+  #   return(ni)
+  # }
 
   while (sum(floor(ni)) < n) {
     max_position <- which.max(decimal_ni)
     decimal_ni[max_position] <- 0
     round_up[max_position] <- 1
-    ni <- floor_ni + round_up
+    ni <- floor(ni) + round_up
   }
 
-  # Ensure ni is at least 5
-  ni[ni < ni_min] <- ni_min
-
   return(ni)
-
 }
 
 # See S.8 ALLOCATION REQUIRING MORE TIIAN 100 PER CENT SAMPLING Cochran 1977 (fl. 118/pg. 114)
@@ -369,25 +375,29 @@ neyman_minimax <- function(npop, sd, ni, alpha, desired_precision, n_min, ni_min
 
     under <- which((npop - ni) > 0)
     ni[over] <- npop[over]
-    n <- n - sum(ni[over])
+    sum_ni_over <- sum(ni[over])
+    n <- n - sum_ni_over
     ni[under] <- npop[under] * sd[under] / sum(npop[under] * sd[under]) * n
 
     pi <- ni/sum(ni)
     pi[under] <- ni[under]/sum(ni[under])
 
+    if (length(ni[under]) < 2) {
+      break
+    }
+
     n <- calculate_sample_size_n(npop[under], sd[under],  pi[under], alpha, desired_precision)
     n <- ceiling(n)
 
     if (is.nan(n) | n < n_min) {
-      n <- n_min
+      n <- n_min - sum(ni[over])
+      #n <- length(ni[under]) * ni_min
     }
 
     ni[under] <- pi[under]*n
-    #ni[under] <- round_ni(ni[under], n, n_min, ni_min)
-    #ni[under] <- round_ni(ni[under], n - sum(ni[under]), n_min, ni_min - sum(ni[under]))
+    ni[under] <- round_ni(ni[under], n, n_min, ni_min - sum_ni_over)
 
     pi <- ni/sum(ni)
-
     over <- which((npop - ni) < 0)
 
   }
@@ -469,9 +479,17 @@ get_ni <- function(npop, sd, pi, alpha, desired_precision, n_min, ni_min){
     n <- n_min
   }
 
-  ni <- round_ni(n*pi, n, n_min, ni_min)
+  ni <- n*pi
+
+  if (any(ni < ni_min)) {
+    # Update the vector to ensure all elements are at least the given number
+    ni[ni < ni_min] <- ni_min
+  }
+
+  ni <- round_ni(ni, n, n_min, ni_min)
   ni <- neyman_minimax(npop, sd, ni, alpha, desired_precision, n_min, ni_min)
-  #ni <- round_ni(n*pi, n, n_min, ni_min)
+  ni <- round_ni(ni, n, n_min, ni_min)
+  ni <- ifelse(ni > npop, npop, ni)
 
   return(ni)
 
@@ -513,7 +531,6 @@ build_strata <- function(my_data_ref, data_column_name, dataframe, boundaries, e
     ) %>%
     relocate(!!sym(getStratumName()) , xmin, xmax)
 
-  #print(strata)
   return(strata)
 }
 
@@ -563,8 +580,8 @@ best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, s
     number_of_bins <- bins_param$bins
 
 
-    binwidth <- binwidth
-    number_of_bins <- number_of_bins
+    binwidth <- binwidth/10
+    number_of_bins <- number_of_bins*10
 
     #print(binwidth)
     #print(number_of_bins)
@@ -590,6 +607,7 @@ best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, s
     my_data$Interval <- add_interval_original_data(my_data, data_column_name, freq_distribution)
     freq_distribution <- generate_freq_distribution(my_data, data_column_name, freq_distribution)
     freq_distribution <- add_square_root_freq(freq_distribution)
+    #print(freq_distribution)
 
     if (iter > 0) {
 
@@ -608,7 +626,7 @@ best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, s
 
     }
 
-    best_cum_freq <- get_best_cum_freq(allocation_method, freq_distribution, strata_L)
+    best_cum_freq <- get_best_cum_freq(allocation_method, freq_distribution, strata_L, user_cutoff)
     #print(best_cum_freq)
 
     bins <- c(min(freq_distribution$xmin), best_cum_freq, min(max(freq_distribution$xmax), user_cutoff))
@@ -665,7 +683,7 @@ best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, s
       summarise(max_n = max(n), min_n = min(n))
 
     if (nrow(best_n_dataframe) > 1 & check_n_var$max_n > break_n*check_n_var$min_n) {
-      print("break 3")
+      #print("break 3")
       break
     }
 
@@ -696,9 +714,6 @@ build_optimum_result <- function (best_n_dataframe) {
 }
 
 build_final_strata <- function(best_n_dataframe, estimation_method, p1, my_data, data_column_name){
-
-  print(getPrimaryKey())
-  print("getPrimaryKey() here")
 
   cut_off <- best_n_dataframe$cut_off[[1]]
   iter <- best_n_dataframe$iter[[1]]
@@ -906,7 +921,7 @@ execute <- function (my_data, data_column_name, user_cutoff = desired_precision/
 
       user_cutoff <- bounds$upper_bound
       best_n_dataframe <- best_cut_off(my_data, user_cutoff, cutted_data, data_column_name, strata, estimation_method, allocation_method, p1, alpha, desired_precision, best_n_dataframe, n_min, ni_min, break_n)
-      print(best_n_dataframe)
+      #print(best_n_dataframe)
     }
 
 
