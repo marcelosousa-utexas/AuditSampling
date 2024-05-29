@@ -323,7 +323,7 @@ samplingGenerator_GUI <- function() {
 
       updateSelectInput(session, "column_selector", "Select a column", choices = colnames(df))
       #update_initial_values()
-      relative_precision_react(relative_precision*5)
+      relative_precision_react(relative_precision/2)
       shinyjs::show("next_button")
 
 
@@ -454,7 +454,7 @@ samplingGenerator_GUI <- function() {
         desired_precision = formData$data$precision,
         n_min = formData$data$n_min,
         ni_min = formData$data$ni_min,
-        break_n = 4))
+        break_n = 10))
 
       strata <- result_react()$sample_planning %>%
         select(-Sum_Squares)

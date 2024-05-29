@@ -234,6 +234,37 @@ linear_interpolation <- function(x1, y1, x2, y2, x) {
   return(y)
 }
 
+interpolate_duplicates <- function(vec) {
+  # Identify indices of duplicated values
+  duplicated_indices <- which(duplicated(vec) | duplicated(vec, fromLast = TRUE))
+
+  # Iterate through each duplicated value
+  for (value in unique(vec[duplicated_indices])) {
+    indices <- which(vec == value)
+
+    # If there are duplicates, perform interpolation
+    if (length(indices) > 1) {
+      start_idx <- indices[1] - 1
+      end_idx <- indices[length(indices)] + 1
+
+      # Ensure indices are within the bounds of the vector
+      if (start_idx < 1) start_idx <- 1
+      if (end_idx > length(vec)) end_idx <- length(vec)
+
+      start_value <- vec[start_idx]
+      end_value <- vec[end_idx]
+
+      # Interpolate values
+      n <- length(indices)
+      for (i in seq_along(indices)) {
+        vec[indices[i]] <- start_value + (end_value - start_value) * (i / (n + 1))
+      }
+    }
+  }
+
+  return(vec)
+}
+
 
 get_best_cum_freq <- function(allocation_method, dataframe, L) {
 
@@ -308,7 +339,7 @@ calculate_sd <- function(estimation_method, Sum_Squares, npop, mean, p1 = NULL) 
 
 }
 
-round_ni <- function(ni, n, ni_min) {
+round_ni <- function(ni, n, n_min, ni_min) {
 
   floor_ni <- floor(ni)
   decimal_ni <- ni - floor(ni)
@@ -352,7 +383,8 @@ neyman_minimax <- function(npop, sd, ni, alpha, desired_precision, n_min, ni_min
     }
 
     ni[under] <- pi[under]*n
-    ni[under] <- round_ni(ni[under], n, ni_min)
+    #ni[under] <- round_ni(ni[under], n, n_min, ni_min)
+    #ni[under] <- round_ni(ni[under], n - sum(ni[under]), n_min, ni_min - sum(ni[under]))
 
     pi <- ni/sum(ni)
 
@@ -437,8 +469,9 @@ get_ni <- function(npop, sd, pi, alpha, desired_precision, n_min, ni_min){
     n <- n_min
   }
 
-  ni <- round_ni(n*pi, n, ni_min)
+  ni <- round_ni(n*pi, n, n_min, ni_min)
   ni <- neyman_minimax(npop, sd, ni, alpha, desired_precision, n_min, ni_min)
+  #ni <- round_ni(n*pi, n, n_min, ni_min)
 
   return(ni)
 
@@ -521,7 +554,7 @@ build_sub_strata <- function (my_data_ref, data_column_name, dataframe, boundari
 best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, strata_L, estimation_method, allocation_method, p1, alpha, desired_precision, best_n_dataframe, n_min, ni_min, break_n) {
 
   iter <- 0
-  max_iter <- Inf
+  max_iter <- 20
 
   while(TRUE) {
 
@@ -559,13 +592,20 @@ best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, s
     freq_distribution <- add_square_root_freq(freq_distribution)
 
     if (iter > 0) {
-        cut_off <- freq_distribution$xmax[nrow(freq_distribution) - iter]
-        freq_distribution <- freq_distribution %>%
-          filter(xmax < cut_off)
 
-        if (nrow(freq_distribution) == 0) {
-          break
-        }
+      if (nrow(freq_distribution) == 0) {
+        break
+      }
+
+      cut_off <- freq_distribution$xmax[nrow(freq_distribution) - iter]
+
+      if (length(cut_off) < 1) {
+        break
+      }
+
+      freq_distribution <- freq_distribution %>%
+        filter(xmax < max(cut_off))
+
     }
 
     best_cum_freq <- get_best_cum_freq(allocation_method, freq_distribution, strata_L)
@@ -576,11 +616,9 @@ best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, s
 
 
     if (any(duplicated(bins))) {
-      #print("break 1")
-      break
+      bins <- interpolate_duplicates(bins)
     }
 
-    #
     # Create a dataframe from bins
     boundaries <- data.frame(xmin = bins)
 
@@ -627,12 +665,12 @@ best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, s
       summarise(max_n = max(n), min_n = min(n))
 
     if (nrow(best_n_dataframe) > 1 & check_n_var$max_n > break_n*check_n_var$min_n) {
-      #print("break 3")
+      print("break 3")
       break
     }
 
     if (sum(sub_strata$ni) < n_min) {
-      #print("break 4")
+      print("break 4")
       break
     }
 
@@ -868,11 +906,13 @@ execute <- function (my_data, data_column_name, user_cutoff = desired_precision/
 
       user_cutoff <- bounds$upper_bound
       best_n_dataframe <- best_cut_off(my_data, user_cutoff, cutted_data, data_column_name, strata, estimation_method, allocation_method, p1, alpha, desired_precision, best_n_dataframe, n_min, ni_min, break_n)
+      print(best_n_dataframe)
     }
 
 
   }
 
+  print(best_n_dataframe)
   optimum_result <- build_optimum_result(best_n_dataframe)
 
   achieved_precision <- optimum_result$precision

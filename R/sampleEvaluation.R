@@ -1,4 +1,9 @@
-evaluate_sample <- function(sample_planning, unitsToExamine, booked_column_name = "Booked_Values", audit_column_name = "Audited_Values", confidence = 0.95, estimation_method = "mean", t_Student = FALSE) {
+evaluate_sample <- function(sample_planning, unitsToExamine,
+                            booked_column_name = "Booked_Values",
+                            audit_column_name = "Audited_Values",
+                            confidence = 0.95,
+                            estimation_method = "mean",
+                            t_Student = FALSE) {
 
   stratum_name <- "Stratum"
   higher_values <- "Census"
@@ -219,12 +224,12 @@ evaluate_sample <- function(sample_planning, unitsToExamine, booked_column_name 
   #select(-sd_error_estimate, -var_estimate)
 
   sub_strata_censu <- unitsToExamine %>%
-    filter(!!sym(getStratumName()) == "Censo")
+    filter(!!sym(getStratumName()) == getHigherValues())
 
   sub_strata_censu <- sub_strata_censu %>%
     group_by(!!sym(getStratumName())) %>%
     summarise(
-      !!sym(getStratumName()) := "Censo",
+      !!sym(getStratumName()) := getHigherValues(),
       nsample = n(),
       npop = n(),
       exp_audited = sum(!!sym(audit_column_name)),

@@ -1,14 +1,20 @@
-unitsToSample <- function(my_data, data_column_name, primaryKey, sample_planning, booked_column_name = "Booked_Values", audit_column_name = "Audited_Values") {
+unitsToSample <- function(my_data, data_column_name,
+                          primaryKey,
+                          sample_planning,
+                          booked_column_name = "Booked_Values",
+                          audit_column_name = "Audited_Values") {
+
+
 
   census <- my_data %>%
-    filter(Stratum == "Censo")  %>%
-    arrange(Stratum, !!sym(data_column_name) )
+    filter(!!sym(getStratumName()) == getHigherValues())  %>%
+    arrange(!!sym(getStratumName()), !!sym(data_column_name) )
 
   sampling_data <- my_data %>%
-    filter(!(Stratum == "Censo"))
+    filter(!(!!sym(getStratumName()) == getHigherValues()))
 
   sample_planning <- sample_planning %>%
-    filter(grepl("^\\d+$", Stratum))
+    filter(grepl("^\\d+$", !!sym(getStratumName())))
 
   ni <- sample_planning %>%
     {setNames(.$ni, .$Stratum)}
@@ -23,13 +29,13 @@ unitsToSample <- function(my_data, data_column_name, primaryKey, sample_planning
 
   sample_data <- sampling_data %>%
     # Filter for numeric strata (optional)
-    filter(grepl("^\\d+$", Stratum)) %>%
+    filter(grepl("^\\d+$", !!sym(getStratumName()))) %>%
     #mutate(Stratum = as.numeric(Stratum)) %>%
     # Group by Stratum
-    group_by(Stratum) %>%
+    group_by(!!sym(getStratumName())) %>%
     # Sample data from each group
     nest() %>%
-    mutate(data = map2(data, Stratum, ~sample_func(.x, ni, .y))) %>%
+    mutate(data = map2(data, !!sym(getStratumName()), ~sample_func(.x, ni, .y))) %>%
     ungroup() %>%
     unnest(data) %>%
     #arrange(Stratum, !!sym(data_column_name)) %>%
@@ -87,16 +93,16 @@ moreUnitsToSample <- function(dataframe, data_column_name, primaryKey, unitsToSa
 
   sample_data <- sampling_data %>%
     # Filter for numeric strata (optional)
-    filter(grepl("^\\d+$", Stratum)) %>%
+    filter(grepl("^\\d+$", !!sym(getStratumName()))) %>%
     #mutate(Stratum = as.numeric(Stratum)) %>%
     # Group by Stratum
-    group_by(Stratum) %>%
+    group_by(!!sym(getStratumName())) %>%
     # Sample data from each group
     nest() %>%
-    mutate(data = map2(data, Stratum, ~sample_func(.x, ni, .y))) %>%
+    mutate(data = map2(data, !!sym(getStratumName()), ~sample_func(.x, ni, .y))) %>%
     ungroup() %>%
     unnest(data) %>%
-    arrange(Stratum, !!sym(data_column_name)) %>%
+    arrange(!!sym(getStratumName()), !!sym(data_column_name)) %>%
     relocate(!!sym(primaryKey))
 
   # sample_data <- sample_data %>%
@@ -113,7 +119,7 @@ moreUnitsToSample <- function(dataframe, data_column_name, primaryKey, unitsToSa
     #   Booked_Values = !!sym(data_column_name)
     #   #Audited_Values = ""
     # )  %>%
-    arrange(Stratum, !!sym(data_column_name))
+    arrange(!!sym(getStratumName()), !!sym(data_column_name))
 
 
 
@@ -145,7 +151,7 @@ updateNi <- function(dataframe, confidence, precision, n_min, ni_min) {
   alplha <- 1 - confidence
 
   eval <- dataframe %>%
-    filter(grepl("^\\d+$", Stratum))
+    filter(grepl("^\\d+$", !!sym(getStratumName())))
 
   new_ni <- get_ni(eval$npop, eval$sd, eval$nsample/(sum(eval$nsample)), alplha, precision, n_min, ni_min)
 
@@ -161,7 +167,7 @@ updateDataBaseUnitsToSample <- function(dataframe, data_column_name, primaryKey,
 
   check_unitToSample <- function(invoice_amount, Stratum) {
     if (!is.na(invoice_amount)) {
-      if (Stratum == "Censo") {
+      if (getStratumName() == getHigherValues()) {
         return(2)
       } else {
         return(1)
@@ -188,7 +194,7 @@ updateDataBaseUnitsToSample <- function(dataframe, data_column_name, primaryKey,
   data_column_name <- paste(data_column_name, ".temp", sep="")
 
   dataframe <- dataframe %>%
-    mutate(unitToSample = mapply(check_unitToSample, !!sym(data_column_name), Stratum)) %>%
+    mutate(unitToSample = mapply(check_unitToSample, !!sym(data_column_name), !!sym(getStratumName()))) %>%
     select(-!!sym(data_column_name))
 
   sum(dataframe$unitToSample)
