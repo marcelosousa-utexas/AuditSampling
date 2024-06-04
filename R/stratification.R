@@ -858,7 +858,7 @@ execute <- function (my_data, data_column_name, user_cutoff = desired_precision/
   columnNamesClass <- columnNames(primaryKey = primaryKey, booked_column_name = booked_column_name, audit_column_name = audit_column_name, data_column_name = data_column_name, stratum_name = stratum_name, higher_values = higher_values)
 
   assign("col_data", columnNamesClass, envir = .AuditSampling_env)
-  print(.AuditSampling_env$col_data)
+  #print(.AuditSampling_env$col_data)
 
   # primaryKey <- getPrimaryKey()
   # print(primaryKey)
@@ -927,7 +927,7 @@ execute <- function (my_data, data_column_name, user_cutoff = desired_precision/
 
   }
 
-  print(best_n_dataframe)
+  #print(best_n_dataframe)
   optimum_result <- build_optimum_result(best_n_dataframe)
 
   achieved_precision <- optimum_result$precision
