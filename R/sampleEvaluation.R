@@ -11,7 +11,7 @@ evaluate_sample <- function(sample_planning, unitsToExamine,
   columnNamesClass <- columnNames(primaryKey = "primaryKey", booked_column_name = booked_column_name, audit_column_name = audit_column_name, data_column_name = "data_column_name", stratum_name = stratum_name, higher_values = higher_values)
 
   assign("col_data", columnNamesClass, envir = .AuditSampling_env)
-  print(.AuditSampling_env$col_data)
+  #print(.AuditSampling_env$col_data)
 
   #print(getStratumName())
   #t_Student <- FALSE
@@ -186,11 +186,11 @@ evaluate_sample <- function(sample_planning, unitsToExamine,
   # Function to check if booked_value is within the specified interval
   check_within_interval <- function(materiality, booked_value, expected_audited_value, precision) {
     # Check if booked_value is within the interval
-    print(expected_audited_value - precision)
-    print(booked_value - materiality )
+    #print(expected_audited_value - precision)
+    #print(booked_value - materiality )
 
-    print(expected_audited_value + precision)
-    print(booked_value + materiality )
+    #print(expected_audited_value + precision)
+    #print(booked_value + materiality )
 
     is_within_interval <- (expected_audited_value - precision) >= booked_value - materiality &
       (expected_audited_value + precision) <= booked_value + materiality
