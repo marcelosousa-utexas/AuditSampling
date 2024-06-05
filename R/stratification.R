@@ -350,17 +350,32 @@ round_ni <- function(ni, n, n_min, ni_min) {
 
   decimal_ni <- ni - floor(ni)
   round_up <- numeric(length(ni))
+  #floor_ni <- floor(ni)
 
   # if (sum(floor(ni)) == sum(ni)) {
   #   return(ni)
   # }
 
-  while (sum(floor(ni)) < n) {
+  if (sum(floor(ni)) >= n) {
+    return(floor(ni))
+  }
+
+  while ( sum(floor(ni)) < n) {
     max_position <- which.max(decimal_ni)
     decimal_ni[max_position] <- 0
     round_up[max_position] <- 1
     ni <- floor(ni) + round_up
+    #print(ni)
   }
+
+
+
+  # while (sum(floor_ni) < n) {
+  #   max_position <- which.max(decimal_ni)
+  #   decimal_ni[max_position] <- 0
+  #   round_up[max_position] <- 1
+  #   ni <- floor_ni + round_up
+  # }
 
   return(ni)
 }
@@ -475,21 +490,43 @@ get_ni <- function(npop, sd, pi, alpha, desired_precision, n_min, ni_min){
   n <- calculate_sample_size_n(npop, sd, pi, alpha, desired_precision)
   n <- ceiling(n)
 
+  #print(n)
+  #print("n 1")
+
   if (is.nan(n) | n < n_min) {
     n <- n_min
   }
 
+  #print(n)
+  #print("n 2")
+
   ni <- n*pi
+
+  #print(ni)
+  #print("ni 1")
 
   if (any(ni < ni_min)) {
     # Update the vector to ensure all elements are at least the given number
     ni[ni < ni_min] <- ni_min
+    #n <- sum(ceiling(ni))
   }
 
+  #print(n)
+  #print("n 3")
+  #print(ni)
+  #print("ni 2")
   ni <- round_ni(ni, n, n_min, ni_min)
+  #print(ni)
+  #print("ni 3")
   ni <- neyman_minimax(npop, sd, ni, alpha, desired_precision, n_min, ni_min)
+  #print(ni)
+  #print("ni 2")
   ni <- round_ni(ni, n, n_min, ni_min)
+  #print(ni)
+  #print("ni 3")
   ni <- ifelse(ni > npop, npop, ni)
+  #print(ni)
+  #print("ni 4")
 
   return(ni)
 
@@ -580,8 +617,8 @@ best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, s
     number_of_bins <- bins_param$bins
 
 
-    binwidth <- binwidth/10
-    number_of_bins <- number_of_bins*10
+    #binwidth <- binwidth/10
+    #number_of_bins <- number_of_bins*10
 
     #print(binwidth)
     #print(number_of_bins)
