@@ -268,6 +268,10 @@ interpolate_duplicates <- function(vec) {
 
 get_best_cum_freq <- function(allocation_method, dataframe, L, user_cutoff) {
 
+  print(nrow(dataframe))
+  #print(length(dataframe))
+  #print(allocation_method)
+
   if (allocation_method  == "Neyman") {
     cum_total <- dataframe$csqrtf
     total <- dataframe$sqrtf
@@ -617,6 +621,7 @@ best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, s
     number_of_bins <- bins_param$bins
 
 
+
     #binwidth <- binwidth/10
     #number_of_bins <- number_of_bins*10
 
@@ -634,11 +639,15 @@ best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, s
     }
 
 
+    #binwidth <- 650000
+    #number_of_bins <- 958
+
+
     #print(binwidth)
     #print(number_of_bins)
 
-    #binwidth <- binwidth/(strata_L/4)
-    #number_of_bins <- number_of_bins*(strata_L/4)
+    binwidth <- binwidth/(strata_L/4)
+    number_of_bins <- number_of_bins*(strata_L/4)
 
     freq_distribution <- get_freq_distribution(my_data, data_column_name, binwidth, number_of_bins)
     my_data$Interval <- add_interval_original_data(my_data, data_column_name, freq_distribution)
@@ -662,6 +671,14 @@ best_cut_off <- function (my_data_ref, user_cutoff, my_data, data_column_name, s
         filter(xmax < max(cut_off))
 
     }
+
+
+    if (nrow(freq_distribution) == 0) {
+      next
+    }
+
+
+
 
     best_cum_freq <- get_best_cum_freq(allocation_method, freq_distribution, strata_L, user_cutoff)
     #print(best_cum_freq)
@@ -752,9 +769,14 @@ build_optimum_result <- function (best_n_dataframe) {
 
 build_final_strata <- function(best_n_dataframe, estimation_method, p1, my_data, data_column_name){
 
+
   cut_off <- best_n_dataframe$cut_off[[1]]
   iter <- best_n_dataframe$iter[[1]]
   sub_strata <- best_n_dataframe$strata[[1]]
+
+  #print(sub_strata)
+  #sub_strata$ni[[7]] <- sub_strata$ni[[7]] + 1
+  #sub_strata$ni[[9]] <- sub_strata$ni[[9]] + 1
 
   sub_totals <- sub_strata %>%
     summarise(

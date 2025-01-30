@@ -90,8 +90,7 @@ samplingGenerator_GUI <- function() {
     audit_column_name <- "Audited_Values"
 
     relative_precision <- 0.02 # standard value for precision is 10% of the total values
-    relative_cut_off <- 0.05 + 0.01 - 0.01 # standard value for the cut off is 5% of the precision
-    print(relative_cut_off)
+    relative_cut_off <- 0.05 # standard value for the cut off is 5% of the precision
 
 
     relative_precision_react <- reactiveVal(relative_precision)

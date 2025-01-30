@@ -268,28 +268,28 @@ samplingEvaluation_GUI <- function() {
 
       evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react(), booked_column_name, audit_column_name, parameters_react()$confidence, parameters_react()$estimation_method))
 
-      unitsToExamine <- sampleUnits_react()
-
-      my_data <- data_react() %>%
-        filter(unitToSample == 0) %>%
-        select(-unitToSample)
-
-      new_samples <- take_more_samples(my_data, selected_column(), booked_column_name, audit_column_name,  parameters_react()$precision, samplingDesign_react(), unitsToExamine, evaluation_react(), parameters_react()$confidence, parameters_react()$estimation_method)
-
-      new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
-
-
-      new_ni <- new_samples$eval_dataframe %>%
-        filter(grepl("^\\d+$", Stratum)) %>%
-        select(nsample)
-
-      strata <- build_final_strata_update(samplingDesign_react(), new_ni$nsample)
-
-
-      sampleUnits_react(new_samples$unitsToExamine)
-      samplingDesign_react(strata)
-
-      evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react(), booked_column_name, audit_column_name, parameters_react()$confidence, parameters_react()$estimation_method))
+      # unitsToExamine <- sampleUnits_react()
+      #
+      # my_data <- data_react() %>%
+      #   filter(unitToSample == 0) %>%
+      #   select(-unitToSample)
+      #
+      # new_samples <- take_more_samples(my_data, selected_column(), booked_column_name, audit_column_name,  parameters_react()$precision, samplingDesign_react(), unitsToExamine, evaluation_react(), parameters_react()$confidence, parameters_react()$estimation_method)
+      #
+      # new_data_react(updateDataBaseUnitsToSample(data_react(), selected_column(), primaryKey, unitsToExamine))
+      #
+      #
+      # new_ni <- new_samples$eval_dataframe %>%
+      #   filter(grepl("^\\d+$", Stratum)) %>%
+      #   select(nsample)
+      #
+      # strata <- build_final_strata_update(samplingDesign_react(), new_ni$nsample)
+      #
+      #
+      # sampleUnits_react(new_samples$unitsToExamine)
+      # samplingDesign_react(strata)
+      #
+      # evaluation_react(evaluate_sample(samplingDesign_react(), sampleUnits_react(), booked_column_name, audit_column_name, parameters_react()$confidence, parameters_react()$estimation_method))
 
       output$dataTableEvaluate <- renderTable({
         #shinyjs::html("feedback2", "")

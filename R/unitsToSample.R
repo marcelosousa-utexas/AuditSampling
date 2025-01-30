@@ -167,7 +167,7 @@ updateDataBaseUnitsToSample <- function(dataframe, data_column_name, primaryKey,
 
   check_unitToSample <- function(invoice_amount, Stratum) {
     if (!is.na(invoice_amount)) {
-      if (getStratumName() == getHigherValues()) {
+      if (Stratum == getHigherValues()) {
         return(2)
       } else {
         return(1)
